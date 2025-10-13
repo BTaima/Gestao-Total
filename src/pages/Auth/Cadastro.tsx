@@ -1,0 +1,233 @@
+import { useState } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
+import { useApp } from '@/context/AppContext';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { toast } from 'sonner';
+import { User, Mail, Lock, Chrome, Facebook, Instagram, ArrowLeft, Eye, EyeOff } from 'lucide-react';
+
+export default function Cadastro() {
+  const navigate = useNavigate();
+  const { cadastrar } = useApp();
+  const [nome, setNome] = useState('');
+  const [email, setEmail] = useState('');
+  const [senha, setSenha] = useState('');
+  const [confirmSenha, setConfirmSenha] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [mostrarSenha, setMostrarSenha] = useState(false);
+  const [mostrarConfirmSenha, setMostrarConfirmSenha] = useState(false);
+
+  const validatePassword = (password: string): boolean => {
+    return (
+      password.length >= 8 &&
+      /[A-Z]/.test(password) &&
+      /[0-9]/.test(password) &&
+      /[!@#$%^&*]/.test(password)
+    );
+  };
+
+  const handleCadastro = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!validatePassword(senha)) {
+      toast.error('A senha deve ter 8+ caracteres, 1 maiúscula, 1 número e 1 caractere especial');
+      return;
+    }
+
+    if (senha !== confirmSenha) {
+      toast.error('As senhas não coincidem');
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const success = await cadastrar(nome, email, senha);
+      if (success) {
+        toast.success('Cadastro realizado! Vamos configurar seu perfil');
+        navigate('/onboarding-setup');
+      } else {
+        toast.error('Este email já está cadastrado');
+      }
+    } catch (error) {
+      toast.error('Erro ao criar conta');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSocialLogin = (provider: string) => {
+    toast.info(`Cadastro com ${provider} em breve!`);
+  };
+
+  return (
+    <div className="min-h-screen flex flex-col bg-background">
+      {/* Header */}
+      <div className="gradient-hero pt-safe px-6 pb-16">
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => navigate('/login')}
+          className="text-white mb-8"
+        >
+          <ArrowLeft className="w-5 h-5" />
+        </Button>
+        <div className="text-center animate-fade-in">
+          <h1 className="text-3xl font-bold text-white mb-2">Criar Conta</h1>
+          <p className="text-white/90">Comece a organizar seu negócio</p>
+        </div>
+      </div>
+
+      {/* Cadastro Form */}
+      <div className="flex-1 px-6 -mt-8 pb-8">
+        <div className="bg-card rounded-2xl shadow-xl p-6 mb-6 animate-slide-up">
+          <form onSubmit={handleCadastro} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="nome">Nome completo</Label>
+              <div className="relative">
+                <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                <Input
+                  id="nome"
+                  type="text"
+                  placeholder="Seu nome"
+                  value={nome}
+                  onChange={(e) => setNome(e.target.value)}
+                  className="pl-10"
+                  required
+                  minLength={3}
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="email">Email</Label>
+              <div className="relative">
+                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder="seu@email.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="pl-10"
+                  required
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="senha">Senha</Label>
+              <div className="relative">
+                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                <Input
+                  id="senha"
+                  type={mostrarSenha ? "text" : "password"}
+                  placeholder="Senha forte"
+                  value={senha}
+                  onChange={(e) => setSenha(e.target.value)}
+                  className="pl-10 pr-10"
+                  required
+                />
+                <button
+                  type="button"
+                  onClick={() => setMostrarSenha(!mostrarSenha)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  {mostrarSenha ? (
+                    <EyeOff className="w-5 h-5" />
+                  ) : (
+                    <Eye className="w-5 h-5" />
+                  )}
+                </button>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Mínimo 8 caracteres, 1 maiúscula, 1 número e 1 caractere especial
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="confirmSenha">Confirmar senha</Label>
+              <div className="relative">
+                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                <Input
+                  id="confirmSenha"
+                  type={mostrarConfirmSenha ? "text" : "password"}
+                  placeholder="Confirme sua senha"
+                  value={confirmSenha}
+                  onChange={(e) => setConfirmSenha(e.target.value)}
+                  className="pl-10 pr-10"
+                  required
+                />
+                <button
+                  type="button"
+                  onClick={() => setMostrarConfirmSenha(!mostrarConfirmSenha)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  {mostrarConfirmSenha ? (
+                    <EyeOff className="w-5 h-5" />
+                  ) : (
+                    <Eye className="w-5 h-5" />
+                  )}
+                </button>
+              </div>
+            </div>
+
+            <Button
+              type="submit"
+              className="w-full btn-gradient h-12 text-base"
+              disabled={loading}
+            >
+              {loading ? 'Criando conta...' : 'Criar conta'}
+            </Button>
+          </form>
+
+          <div className="mt-6">
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-border"></div>
+              </div>
+              <div className="relative flex justify-center text-sm">
+                <span className="px-4 bg-card text-muted-foreground">Ou cadastre-se com</span>
+              </div>
+            </div>
+
+            <div className="mt-6 grid grid-cols-3 gap-3">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => handleSocialLogin('Google')}
+                className="h-12"
+              >
+                <Chrome className="w-5 h-5" />
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => handleSocialLogin('Facebook')}
+                className="h-12"
+              >
+                <Facebook className="w-5 h-5" />
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => handleSocialLogin('Instagram')}
+                className="h-12"
+              >
+                <Instagram className="w-5 h-5" />
+              </Button>
+            </div>
+          </div>
+
+          <div className="mt-6 text-center text-sm">
+            <span className="text-muted-foreground">Já tem uma conta? </span>
+            <Link to="/login" className="text-primary font-semibold hover:underline">
+              Entrar
+            </Link>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
