@@ -1,6 +1,8 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { Usuario, Cliente, Agendamento, Servico, Transacao, Lembrete, ConfiguracoesUsuario, Bloqueio, ListaEspera, Estabelecimento, Profissional, Avaliacao, Notificacao } from '@/types';
 import { storage, generateId } from '@/utils/storage';
+import { supabase } from '@/integrations/supabase/client';
+import { User, Session } from '@supabase/supabase-js';
 
 interface AppContextType {
   usuario: Usuario | null;
@@ -111,6 +113,8 @@ const defaultConfiguracoes: ConfiguracoesUsuario = {
 };
 
 export function AppProvider({ children }: { children: ReactNode }) {
+  const [user, setUser] = useState<User | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
   const [usuario, setUsuario] = useState<Usuario | null>(null);
   const [estabelecimentos, setEstabelecimentos] = useState<Estabelecimento[]>([]);
   const [clientes, setClientes] = useState<Cliente[]>([]);
@@ -124,9 +128,73 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [avaliacoes, setAvaliacoes] = useState<Avaliacao[]>([]);
   const [notificacoes, setNotificacoes] = useState<Notificacao[]>([]);
 
+  // Setup Supabase auth listener
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      setSession(session);
+      setUser(session?.user ?? null);
+      
+      if (session?.user) {
+        setTimeout(() => {
+          loadUserProfile(session.user.id);
+        }, 0);
+      } else {
+        setUsuario(null);
+      }
+    });
+
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      setUser(session?.user ?? null);
+      if (session?.user) {
+        loadUserProfile(session.user.id);
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  // Load user profile from Supabase
+  const loadUserProfile = async (userId: string) => {
+    try {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .single();
+
+      const { data: userRole } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', userId)
+        .single();
+
+      if (profile && userRole) {
+        const usuarioData: Usuario = {
+          id: profile.id,
+          nome: profile.nome_completo,
+          email: user?.email || '',
+          telefone: profile.telefone,
+          tipo: userRole.role as any,
+          estabelecimentoId: profile.id,
+          estabelecimentoNome: profile.nome_estabelecimento || '',
+          ativo: profile.ativo,
+          dataCadastro: new Date(profile.data_cadastro),
+          profissao: profile.categoria || '',
+          nomeNegocio: profile.nome_estabelecimento || '',
+          configuracoes: defaultConfiguracoes,
+          onboardingCompleto: true,
+          setupCompleto: true,
+        };
+        setUsuario(usuarioData);
+      }
+    } catch (error) {
+      console.error('Erro ao carregar perfil:', error);
+    }
+  };
+
   // Load data on mount
   useEffect(() => {
-    const loadedUsuario = storage.load<Usuario>('usuario');
     const loadedEstabelecimentos = storage.load<Estabelecimento[]>('estabelecimentos') || [];
     const loadedClientes = storage.load<Cliente[]>('clientes') || [];
     const loadedAgendamentos = storage.load<Agendamento[]>('agendamentos') || [];
@@ -136,7 +204,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const loadedBloqueios = storage.load<Bloqueio[]>('bloqueios') || [];
     const loadedListaEspera = storage.load<ListaEspera[]>('listaEspera') || [];
 
-    setUsuario(loadedUsuario);
     setEstabelecimentos(loadedEstabelecimentos);
     setClientes(loadedClientes);
     setAgendamentos(loadedAgendamentos);
@@ -186,14 +253,18 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   // Auth functions
   const login = async (email: string, senha: string): Promise<boolean> => {
-    const usuarios = storage.load<Array<{email: string; senha: string; usuario: Usuario}>>('usuarios') || [];
-    const found = usuarios.find(u => u.email === email && u.senha === senha);
-    
-    if (found) {
-      setUsuario(found.usuario);
-      return true;
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password: senha,
+      });
+
+      if (error) throw error;
+      return !!data.user;
+    } catch (error) {
+      console.error('Erro no login:', error);
+      return false;
     }
-    return false;
   };
 
   const cadastrar = async (dados: {
@@ -205,39 +276,37 @@ export function AppProvider({ children }: { children: ReactNode }) {
     categoria: string;
     tipo: 'administrador' | 'profissional' | 'cliente';
   }): Promise<boolean> => {
-    const usuarios = storage.load<Array<{email: string; senha: string; usuario: Usuario}>>('usuarios') || [];
-    
-    if (usuarios.some(u => u.email === dados.email)) {
+    try {
+      const redirectUrl = `${window.location.origin}/`;
+      
+      const { data, error } = await supabase.auth.signUp({
+        email: dados.email,
+        password: dados.senha,
+        options: {
+          emailRedirectTo: redirectUrl,
+          data: {
+            nome_completo: dados.nome,
+            telefone: dados.telefone,
+            nome_estabelecimento: dados.nomeEstabelecimento,
+            categoria: dados.categoria,
+            tipo: dados.tipo,
+          },
+        },
+      });
+
+      if (error) throw error;
+      return !!data.user;
+    } catch (error) {
+      console.error('Erro no cadastro:', error);
       return false;
     }
-
-    const estabelecimentoId = generateId();
-    
-    const novoUsuario: Usuario = {
-      id: generateId(),
-      nome: dados.nome,
-      email: dados.email,
-      telefone: dados.telefone,
-      tipo: dados.tipo as any,
-      estabelecimentoId,
-      estabelecimentoNome: dados.nomeEstabelecimento,
-      ativo: true,
-      dataCadastro: new Date(),
-      profissao: dados.categoria,
-      nomeNegocio: dados.nomeEstabelecimento,
-      configuracoes: defaultConfiguracoes,
-      onboardingCompleto: true,
-      setupCompleto: true,
-    };
-
-    usuarios.push({ email: dados.email, senha: dados.senha, usuario: novoUsuario });
-    storage.save('usuarios', usuarios);
-    setUsuario(novoUsuario);
-    return true;
   };
 
-  const logout = () => {
+  const logout = async () => {
+    await supabase.auth.signOut();
     setUsuario(null);
+    setUser(null);
+    setSession(null);
     setClientes([]);
     setAgendamentos([]);
     setServicos([]);
@@ -245,17 +314,26 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setLembretes([]);
   };
 
-  const atualizarUsuario = (dados: Partial<Usuario>) => {
-    if (!usuario) return;
-    const usuarioAtualizado = { ...usuario, ...dados };
-    setUsuario(usuarioAtualizado);
+  const atualizarUsuario = async (dados: Partial<Usuario>) => {
+    if (!usuario || !user) return;
     
-    // Update in usuarios list
-    const usuarios = storage.load<Array<{email: string; senha: string; usuario: Usuario}>>('usuarios') || [];
-    const index = usuarios.findIndex(u => u.usuario.id === usuario.id);
-    if (index !== -1) {
-      usuarios[index].usuario = usuarioAtualizado;
-      storage.save('usuarios', usuarios);
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({
+          nome_completo: dados.nome || usuario.nome,
+          telefone: dados.telefone || usuario.telefone,
+          nome_estabelecimento: dados.estabelecimentoNome || usuario.estabelecimentoNome,
+          categoria: dados.profissao || usuario.profissao,
+        })
+        .eq('id', user.id);
+
+      if (error) throw error;
+
+      const usuarioAtualizado = { ...usuario, ...dados };
+      setUsuario(usuarioAtualizado);
+    } catch (error) {
+      console.error('Erro ao atualizar usuário:', error);
     }
   };
 
