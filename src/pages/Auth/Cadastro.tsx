@@ -1,22 +1,50 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useApp } from '@/context/AppContext';
+import { TipoUsuario } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
-import { User, Mail, Lock, Chrome, Facebook, Instagram, ArrowLeft, Eye, EyeOff } from 'lucide-react';
+import { User, Mail, Lock, Phone, Building2, Briefcase, ArrowLeft, Eye, EyeOff, Chrome, Facebook, Instagram } from 'lucide-react';
+
+const CATEGORIAS = [
+  'Cabeleireiro(a)',
+  'Manicure/Pedicure',
+  'Massagista',
+  'Esteticista',
+  'Barbeiro(a)',
+  'Maquiador(a)',
+  'Depilador(a)',
+  'Designer de Sobrancelhas',
+  'Fisioterapeuta',
+  'Nutricionista',
+  'Personal Trainer',
+  'Outro'
+];
 
 export default function Cadastro() {
   const navigate = useNavigate();
   const { cadastrar } = useApp();
   const [nome, setNome] = useState('');
+  const [nomeEstabelecimento, setNomeEstabelecimento] = useState('');
   const [email, setEmail] = useState('');
+  const [telefone, setTelefone] = useState('');
+  const [categoria, setCategoria] = useState('');
+  const [tipoConta, setTipoConta] = useState<'administrador' | 'profissional' | 'cliente'>('administrador');
   const [senha, setSenha] = useState('');
   const [confirmSenha, setConfirmSenha] = useState('');
   const [loading, setLoading] = useState(false);
   const [mostrarSenha, setMostrarSenha] = useState(false);
   const [mostrarConfirmSenha, setMostrarConfirmSenha] = useState(false);
+
+  const formatTelefone = (value: string) => {
+    const numbers = value.replace(/\D/g, '');
+    if (numbers.length <= 2) return numbers;
+    if (numbers.length <= 7) return `(${numbers.slice(0, 2)}) ${numbers.slice(2)}`;
+    return `(${numbers.slice(0, 2)}) ${numbers.slice(2, 7)}-${numbers.slice(7, 11)}`;
+  };
 
   const validatePassword = (password: string): boolean => {
     return (
@@ -40,13 +68,44 @@ export default function Cadastro() {
       return;
     }
 
+    if (telefone.replace(/\D/g, '').length < 10) {
+      toast.error('Digite um telefone válido com DDD');
+      return;
+    }
+
+    if (!categoria) {
+      toast.error('Selecione uma categoria de trabalho');
+      return;
+    }
+
     setLoading(true);
 
     try {
-      const success = await cadastrar(nome, email, senha);
+      const success = await cadastrar({
+        nome,
+        email,
+        senha,
+        telefone,
+        nomeEstabelecimento,
+        categoria,
+        tipo: tipoConta
+      });
+
       if (success) {
-        toast.success('Cadastro realizado! Vamos configurar seu perfil');
-        navigate('/onboarding-setup');
+        toast.success('Cadastro realizado com sucesso!');
+        
+        // Redireciona para a página apropriada baseado no tipo de conta
+        switch (tipoConta) {
+          case 'administrador':
+            navigate('/admin/dashboard');
+            break;
+          case 'profissional':
+            navigate('/profissional/dashboard');
+            break;
+          case 'cliente':
+            navigate('/cliente/home');
+            break;
+        }
       } else {
         toast.error('Este email já está cadastrado');
       }
@@ -83,6 +142,7 @@ export default function Cadastro() {
       <div className="flex-1 px-6 -mt-8 pb-8">
         <div className="bg-card rounded-2xl shadow-xl p-6 mb-6 animate-slide-up">
           <form onSubmit={handleCadastro} className="space-y-4">
+            {/* Nome Completo */}
             <div className="space-y-2">
               <Label htmlFor="nome">Nome completo</Label>
               <div className="relative">
@@ -90,7 +150,7 @@ export default function Cadastro() {
                 <Input
                   id="nome"
                   type="text"
-                  placeholder="Seu nome"
+                  placeholder="Seu nome completo"
                   value={nome}
                   onChange={(e) => setNome(e.target.value)}
                   className="pl-10"
@@ -100,6 +160,25 @@ export default function Cadastro() {
               </div>
             </div>
 
+            {/* Nome do Estabelecimento */}
+            <div className="space-y-2">
+              <Label htmlFor="estabelecimento">Nome do estabelecimento</Label>
+              <div className="relative">
+                <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                <Input
+                  id="estabelecimento"
+                  type="text"
+                  placeholder="Nome do seu negócio"
+                  value={nomeEstabelecimento}
+                  onChange={(e) => setNomeEstabelecimento(e.target.value)}
+                  className="pl-10"
+                  required
+                  minLength={3}
+                />
+              </div>
+            </div>
+
+            {/* Email */}
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
               <div className="relative">
@@ -116,6 +195,65 @@ export default function Cadastro() {
               </div>
             </div>
 
+            {/* Telefone */}
+            <div className="space-y-2">
+              <Label htmlFor="telefone">Telefone (com DDD)</Label>
+              <div className="relative">
+                <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                <Input
+                  id="telefone"
+                  type="tel"
+                  placeholder="(00) 00000-0000"
+                  value={telefone}
+                  onChange={(e) => setTelefone(formatTelefone(e.target.value))}
+                  className="pl-10"
+                  maxLength={15}
+                  required
+                />
+              </div>
+            </div>
+
+            {/* Categoria de Trabalho */}
+            <div className="space-y-2">
+              <Label htmlFor="categoria">Categoria de trabalho</Label>
+              <div className="relative">
+                <Briefcase className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground z-10" />
+                <Select value={categoria} onValueChange={setCategoria} required>
+                  <SelectTrigger className="pl-10">
+                    <SelectValue placeholder="Selecione sua categoria" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {CATEGORIAS.map((cat) => (
+                      <SelectItem key={cat} value={cat}>
+                        {cat}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            {/* Tipo de Conta */}
+            <div className="space-y-2">
+              <Label htmlFor="tipoConta">Tipo de conta</Label>
+              <Select value={tipoConta} onValueChange={(value: any) => setTipoConta(value)} required>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione o tipo de conta" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="administrador">Administrador</SelectItem>
+                  <SelectItem value="profissional">Profissional</SelectItem>
+                  <SelectItem value="cliente">Cliente</SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                {tipoConta === 'administrador' && 'Acesso completo ao sistema, gerenciar profissionais e clientes'}
+                {tipoConta === 'profissional' && 'Gerenciar sua agenda e atendimentos'}
+                {tipoConta === 'cliente' && 'Agendar serviços e acompanhar seus agendamentos'}
+              </p>
+            </div>
+
+            {/* Senha */}
             <div className="space-y-2">
               <Label htmlFor="senha">Senha</Label>
               <div className="relative">
@@ -146,6 +284,7 @@ export default function Cadastro() {
               </p>
             </div>
 
+            {/* Confirmar Senha */}
             <div className="space-y-2">
               <Label htmlFor="confirmSenha">Confirmar senha</Label>
               <div className="relative">

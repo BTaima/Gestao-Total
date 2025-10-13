@@ -32,7 +32,15 @@ export default function SelecaoPerfil() {
       return;
     }
 
-    const sucesso = await cadastrar(formData.nome, formData.email, formData.senha);
+    const sucesso = await cadastrar({
+      nome: formData.nome,
+      email: formData.email,
+      senha: formData.senha,
+      telefone: formData.telefone,
+      nomeEstabelecimento: formData.nomeEstabelecimento,
+      categoria: 'Outro',
+      tipo: perfilSelecionado === 'admin' ? 'administrador' : perfilSelecionado === 'profissional' ? 'profissional' : 'cliente'
+    });
     
     if (sucesso) {
       if (perfilSelecionado === 'admin') {

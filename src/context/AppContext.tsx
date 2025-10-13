@@ -18,7 +18,15 @@ interface AppContextType {
   
   // Auth
   login: (email: string, senha: string) => Promise<boolean>;
-  cadastrar: (nome: string, email: string, senha: string) => Promise<boolean>;
+  cadastrar: (dados: {
+    nome: string;
+    email: string;
+    senha: string;
+    telefone: string;
+    nomeEstabelecimento: string;
+    categoria: string;
+    tipo: 'administrador' | 'profissional' | 'cliente';
+  }) => Promise<boolean>;
   logout: () => void;
   atualizarUsuario: (usuario: Partial<Usuario>) => void;
   
@@ -188,10 +196,18 @@ export function AppProvider({ children }: { children: ReactNode }) {
     return false;
   };
 
-  const cadastrar = async (nome: string, email: string, senha: string): Promise<boolean> => {
+  const cadastrar = async (dados: {
+    nome: string;
+    email: string;
+    senha: string;
+    telefone: string;
+    nomeEstabelecimento: string;
+    categoria: string;
+    tipo: 'administrador' | 'profissional' | 'cliente';
+  }): Promise<boolean> => {
     const usuarios = storage.load<Array<{email: string; senha: string; usuario: Usuario}>>('usuarios') || [];
     
-    if (usuarios.some(u => u.email === email)) {
+    if (usuarios.some(u => u.email === dados.email)) {
       return false;
     }
 
@@ -199,22 +215,22 @@ export function AppProvider({ children }: { children: ReactNode }) {
     
     const novoUsuario: Usuario = {
       id: generateId(),
-      nome,
-      email,
-      telefone: '',
-      tipo: 'administrador' as any, // Será definido no setup
+      nome: dados.nome,
+      email: dados.email,
+      telefone: dados.telefone,
+      tipo: dados.tipo as any,
       estabelecimentoId,
-      estabelecimentoNome: '',
+      estabelecimentoNome: dados.nomeEstabelecimento,
       ativo: true,
       dataCadastro: new Date(),
-      profissao: '',
-      nomeNegocio: '',
+      profissao: dados.categoria,
+      nomeNegocio: dados.nomeEstabelecimento,
       configuracoes: defaultConfiguracoes,
       onboardingCompleto: true,
-      setupCompleto: false,
+      setupCompleto: true,
     };
 
-    usuarios.push({ email, senha, usuario: novoUsuario });
+    usuarios.push({ email: dados.email, senha: dados.senha, usuario: novoUsuario });
     storage.save('usuarios', usuarios);
     setUsuario(novoUsuario);
     return true;
