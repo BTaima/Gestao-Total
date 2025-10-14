@@ -1,6 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { Usuario, Cliente, Agendamento, Servico, Transacao, Lembrete, ConfiguracoesUsuario, Bloqueio, ListaEspera, Estabelecimento, Profissional, Avaliacao, Notificacao } from '@/types';
-import { storage, generateId } from '@/utils/storage';
 import { supabase } from '@/integrations/supabase/client';
 import { User, Session } from '@supabase/supabase-js';
 
@@ -33,53 +32,53 @@ interface AppContextType {
   atualizarUsuario: (usuario: Partial<Usuario>) => void;
   
   // Clientes
-  adicionarCliente: (cliente: Omit<Cliente, 'id' | 'dataCadastro'>) => void;
-  atualizarCliente: (id: string, cliente: Partial<Cliente>) => void;
-  removerCliente: (id: string) => void;
+  adicionarCliente: (cliente: Omit<Cliente, 'id' | 'dataCadastro'>) => Promise<void>;
+  atualizarCliente: (id: string, cliente: Partial<Cliente>) => Promise<void>;
+  removerCliente: (id: string) => Promise<void>;
   
   // Agendamentos
-  adicionarAgendamento: (agendamento: Omit<Agendamento, 'id' | 'dataCriacao' | 'dataAtualizacao'>) => void;
-  atualizarAgendamento: (id: string, agendamento: Partial<Agendamento>) => void;
-  removerAgendamento: (id: string) => void;
+  adicionarAgendamento: (agendamento: Omit<Agendamento, 'id' | 'dataCriacao' | 'dataAtualizacao'>) => Promise<void>;
+  atualizarAgendamento: (id: string, agendamento: Partial<Agendamento>) => Promise<void>;
+  removerAgendamento: (id: string) => Promise<void>;
   
   // Servicos
-  adicionarServico: (servico: Omit<Servico, 'id'>) => void;
-  atualizarServico: (id: string, servico: Partial<Servico>) => void;
-  removerServico: (id: string) => void;
+  adicionarServico: (servico: Omit<Servico, 'id'>) => Promise<void>;
+  atualizarServico: (id: string, servico: Partial<Servico>) => Promise<void>;
+  removerServico: (id: string) => Promise<void>;
   
   // Transacoes
-  adicionarTransacao: (transacao: Omit<Transacao, 'id'>) => void;
-  atualizarTransacao: (id: string, transacao: Partial<Transacao>) => void;
-  removerTransacao: (id: string) => void;
+  adicionarTransacao: (transacao: Omit<Transacao, 'id'>) => Promise<void>;
+  atualizarTransacao: (id: string, transacao: Partial<Transacao>) => Promise<void>;
+  removerTransacao: (id: string) => Promise<void>;
   
   // Lembretes
-  adicionarLembrete: (lembrete: Omit<Lembrete, 'id'>) => void;
-  atualizarLembrete: (id: string, lembrete: Partial<Lembrete>) => void;
-  removerLembrete: (id: string) => void;
+  adicionarLembrete: (lembrete: Omit<Lembrete, 'id'>) => Promise<void>;
+  atualizarLembrete: (id: string, lembrete: Partial<Lembrete>) => Promise<void>;
+  removerLembrete: (id: string) => Promise<void>;
   
   // Bloqueios
-  adicionarBloqueio: (bloqueio: Omit<Bloqueio, 'id' | 'dataCriacao'>) => void;
-  atualizarBloqueio: (id: string, bloqueio: Partial<Bloqueio>) => void;
-  removerBloqueio: (id: string) => void;
+  adicionarBloqueio: (bloqueio: Omit<Bloqueio, 'id' | 'dataCriacao'>) => Promise<void>;
+  atualizarBloqueio: (id: string, bloqueio: Partial<Bloqueio>) => Promise<void>;
+  removerBloqueio: (id: string) => Promise<void>;
   
   // Lista de Espera
-  adicionarListaEspera: (item: Omit<ListaEspera, 'id' | 'dataCriacao'>) => void;
-  removerListaEspera: (id: string) => void;
+  adicionarListaEspera: (item: Omit<ListaEspera, 'id' | 'dataCriacao'>) => Promise<void>;
+  removerListaEspera: (id: string) => Promise<void>;
   
   // Profissionais
-  adicionarProfissional: (profissional: Omit<Profissional, 'id' | 'dataCadastro'>) => void;
-  atualizarProfissional: (id: string, profissional: Partial<Profissional>) => void;
-  removerProfissional: (id: string) => void;
+  adicionarProfissional: (profissional: Omit<Profissional, 'id' | 'dataCadastro'>) => Promise<void>;
+  atualizarProfissional: (id: string, profissional: Partial<Profissional>) => Promise<void>;
+  removerProfissional: (id: string) => Promise<void>;
   
   // Avaliacoes
-  adicionarAvaliacao: (avaliacao: Avaliacao) => void;
-  atualizarAvaliacao: (id: string, avaliacao: Partial<Avaliacao>) => void;
+  adicionarAvaliacao: (avaliacao: Avaliacao) => Promise<void>;
+  atualizarAvaliacao: (id: string, avaliacao: Partial<Avaliacao>) => Promise<void>;
   
   // Notificacoes
-  adicionarNotificacao: (notificacao: Notificacao) => void;
-  marcarNotificacaoLida: (id: string) => void;
-  marcarTodasLidas: () => void;
-  limparNotificacoesAntigas: () => void;
+  adicionarNotificacao: (notificacao: Notificacao) => Promise<void>;
+  marcarNotificacaoLida: (id: string) => Promise<void>;
+  marcarTodasLidas: () => Promise<void>;
+  limparNotificacoesAntigas: () => Promise<void>;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -116,6 +115,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [usuario, setUsuario] = useState<Usuario | null>(null);
+  const [estabelecimentoId, setEstabelecimentoId] = useState<string | null>(null);
   const [estabelecimentos, setEstabelecimentos] = useState<Estabelecimento[]>([]);
   const [clientes, setClientes] = useState<Cliente[]>([]);
   const [agendamentos, setAgendamentos] = useState<Agendamento[]>([]);
@@ -140,6 +140,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         }, 0);
       } else {
         setUsuario(null);
+        setEstabelecimentoId(null);
       }
     });
 
@@ -170,13 +171,36 @@ export function AppProvider({ children }: { children: ReactNode }) {
         .single();
 
       if (profile && userRole) {
+        // Load or create estabelecimento
+        const { data: estab } = await supabase
+          .from('estabelecimentos')
+          .select('*')
+          .eq('user_id', userId)
+          .maybeSingle();
+
+        let estabelecimentoIdValue = estab?.id;
+
+        if (!estab && userRole.role === 'administrador') {
+          // Create estabelecimento for admin
+          const { data: newEstab } = await supabase
+            .from('estabelecimentos')
+            .insert({
+              user_id: userId,
+              nome: profile.nome_estabelecimento || 'Meu Estabelecimento',
+              telefone: profile.telefone,
+            })
+            .select()
+            .single();
+          estabelecimentoIdValue = newEstab?.id;
+        }
+
         const usuarioData: Usuario = {
           id: profile.id,
           nome: profile.nome_completo,
           email: user?.email || '',
           telefone: profile.telefone,
           tipo: userRole.role as any,
-          estabelecimentoId: profile.id,
+          estabelecimentoId: estabelecimentoIdValue || profile.id,
           estabelecimentoNome: profile.nome_estabelecimento || '',
           ativo: profile.ativo,
           dataCadastro: new Date(profile.data_cadastro),
@@ -187,71 +211,196 @@ export function AppProvider({ children }: { children: ReactNode }) {
           setupCompleto: true,
         };
         setUsuario(usuarioData);
+        setEstabelecimentoId(estabelecimentoIdValue);
       }
-      } catch (error) {
-        if (import.meta.env.DEV) {
-          console.error('Erro ao carregar perfil:', error);
-        }
+    } catch (error) {
+      if (import.meta.env.DEV) {
+        console.error('Erro ao carregar perfil:', error);
       }
+    }
   };
 
-  // Load data on mount
+  // Load all data from Supabase when estabelecimento is set
   useEffect(() => {
-    const loadedEstabelecimentos = storage.load<Estabelecimento[]>('estabelecimentos') || [];
-    const loadedClientes = storage.load<Cliente[]>('clientes') || [];
-    const loadedAgendamentos = storage.load<Agendamento[]>('agendamentos') || [];
-    const loadedServicos = storage.load<Servico[]>('servicos') || [];
-    const loadedTransacoes = storage.load<Transacao[]>('transacoes') || [];
-    const loadedLembretes = storage.load<Lembrete[]>('lembretes') || [];
-    const loadedBloqueios = storage.load<Bloqueio[]>('bloqueios') || [];
-    const loadedListaEspera = storage.load<ListaEspera[]>('listaEspera') || [];
+    if (estabelecimentoId && user?.id) {
+      loadAllData(estabelecimentoId);
+    }
+  }, [estabelecimentoId, user?.id]);
 
-    setEstabelecimentos(loadedEstabelecimentos);
-    setClientes(loadedClientes);
-    setAgendamentos(loadedAgendamentos);
-    setServicos(loadedServicos);
-    setTransacoes(loadedTransacoes);
-    setLembretes(loadedLembretes);
-    setBloqueios(loadedBloqueios);
-    setListaEspera(loadedListaEspera);
-  }, []);
+  const loadAllData = async (estabId: string) => {
+    try {
+      const [clientesRes, servicosRes, profissionaisRes, agendamentosRes, transacoesRes, bloqueiosRes, listaEsperaRes, lembretesRes, avaliacoesRes, notifsRes] = await Promise.all([
+        supabase.from('clientes').select('*').eq('estabelecimento_id', estabId),
+        supabase.from('servicos').select('*').eq('estabelecimento_id', estabId),
+        supabase.from('profissionais').select('*').eq('estabelecimento_id', estabId),
+        supabase.from('agendamentos').select('*').eq('estabelecimento_id', estabId),
+        supabase.from('transacoes').select('*').eq('estabelecimento_id', estabId),
+        supabase.from('bloqueios').select('*').eq('estabelecimento_id', estabId),
+        supabase.from('lista_espera').select('*').eq('estabelecimento_id', estabId),
+        supabase.from('lembretes').select('*').eq('estabelecimento_id', estabId),
+        supabase.from('avaliacoes').select('*').eq('estabelecimento_id', estabId),
+        supabase.from('notificacoes').select('*').eq('user_id', user?.id).order('created_at', { ascending: false }).limit(50),
+      ]);
 
-  // Auto-save
-  useEffect(() => {
-    if (usuario) storage.save('usuario', usuario);
-  }, [usuario]);
+      if (clientesRes.data) {
+        setClientes(clientesRes.data.map(c => ({
+          id: c.id,
+          nome: c.nome,
+          telefone: c.telefone,
+          email: c.email || '',
+          dataNascimento: c.data_nascimento ? new Date(c.data_nascimento) : undefined,
+          endereco: c.endereco || '',
+          observacoes: c.observacoes || '',
+          tags: [],
+          status: c.ativo ? 'ativo' : 'inativo',
+          dataCadastro: new Date(c.data_cadastro),
+          ultimoAtendimento: c.ultima_visita ? new Date(c.ultima_visita) : undefined,
+          totalGasto: Number(c.total_gasto),
+          ticketMedio: c.numero_visitas > 0 ? Number(c.total_gasto) / c.numero_visitas : 0,
+          estabelecimentoId: estabId,
+        })));
+      }
 
-  useEffect(() => {
-    storage.save('estabelecimentos', estabelecimentos);
-  }, [estabelecimentos]);
+      if (servicosRes.data) {
+        setServicos(servicosRes.data.map(s => ({
+          id: s.id,
+          nome: s.nome,
+          descricao: s.descricao || '',
+          duracao: s.duracao,
+          valor: Number(s.valor),
+          categoria: s.categoria || '',
+          cor: '#6366f1',
+          ativo: s.ativo,
+          exigePagamentoAntecipado: false,
+          destaque: false,
+          profissionaisIds: s.profissionais_ids || [],
+          estabelecimentoId: estabId,
+        })));
+      }
 
-  useEffect(() => {
-    storage.save('clientes', clientes);
-  }, [clientes]);
+      if (profissionaisRes.data) {
+        setProfissionais(profissionaisRes.data.map(p => ({
+          id: p.id,
+          nome: p.nome,
+          telefone: p.telefone || '',
+          email: p.email || '',
+          ativo: p.ativo,
+          dataCadastro: new Date(p.created_at),
+          estabelecimentoId: estabId,
+          servicosIds: [],
+        })));
+      }
 
-  useEffect(() => {
-    storage.save('agendamentos', agendamentos);
-  }, [agendamentos]);
+      if (agendamentosRes.data) {
+        setAgendamentos(agendamentosRes.data.map(a => ({
+          id: a.id,
+          clienteId: a.cliente_id,
+          profissionalId: a.profissional_id,
+          servicoId: a.servico_id,
+          dataHora: new Date(a.data_hora),
+          duracao: a.duracao,
+          valor: Number(a.valor),
+          status: a.status as any,
+          observacoes: a.observacoes || '',
+          pagamentoAntecipado: false,
+          pagamentoStatus: 'pendente',
+          dataCriacao: new Date(a.created_at),
+          dataAtualizacao: new Date(a.updated_at),
+          estabelecimentoId: estabId,
+        })));
+      }
 
-  useEffect(() => {
-    storage.save('servicos', servicos);
-  }, [servicos]);
+      if (transacoesRes.data) {
+        setTransacoes(transacoesRes.data.map(t => ({
+          id: t.id,
+          tipo: t.tipo === 'entrada' ? 'receita' : 'despesa',
+          categoria: t.categoria,
+          valor: Number(t.valor),
+          descricao: t.descricao,
+          data: new Date(t.data),
+          metodoPagamento: t.forma_pagamento || 'dinheiro',
+          status: 'pago',
+          profissionalId: t.profissional_id || undefined,
+          estabelecimentoId: estabId,
+        })));
+      }
 
-  useEffect(() => {
-    storage.save('transacoes', transacoes);
-  }, [transacoes]);
+      if (bloqueiosRes.data) {
+        setBloqueios(bloqueiosRes.data.map(b => {
+          const inicio = new Date(b.data_inicio);
+          const fim = new Date(b.data_fim);
+          return {
+            id: b.id,
+            profissionalId: b.profissional_id,
+            dataInicio: inicio,
+            dataFim: fim,
+            horaInicio: inicio.toTimeString().slice(0, 5),
+            horaFim: fim.toTimeString().slice(0, 5),
+            motivo: b.motivo || '',
+            dataCriacao: new Date(b.created_at),
+          };
+        }));
+      }
 
-  useEffect(() => {
-    storage.save('lembretes', lembretes);
-  }, [lembretes]);
+      if (listaEsperaRes.data) {
+        setListaEspera(listaEsperaRes.data.map(l => ({
+          id: l.id,
+          clienteId: l.cliente_id,
+          servicoId: l.servico_id,
+          preferenciaHorario: l.periodo_preferencia || '',
+          observacoes: l.observacoes || '',
+          dataCriacao: new Date(l.created_at),
+        })));
+      }
 
-  useEffect(() => {
-    storage.save('bloqueios', bloqueios);
-  }, [bloqueios]);
+      if (lembretesRes.data) {
+        setLembretes(lembretesRes.data.map(l => ({
+          id: l.id,
+          tipo: l.tipo as any,
+          titulo: l.titulo,
+          descricao: l.descricao || '',
+          dataLembrete: new Date(l.data_lembrete),
+          enviado: l.enviado,
+          notificado: l.enviado,
+          concluido: false,
+          clienteId: l.cliente_id || undefined,
+        })));
+      }
 
-  useEffect(() => {
-    storage.save('listaEspera', listaEspera);
-  }, [listaEspera]);
+      if (avaliacoesRes.data) {
+        setAvaliacoes(avaliacoesRes.data.map(a => ({
+          id: a.id,
+          clienteId: a.cliente_id,
+          agendamentoId: a.agendamento_id || '',
+          profissionalId: a.profissional_id || '',
+          servicoId: a.servico_id || '',
+          nota: a.nota as any,
+          comentario: a.comentario || '',
+          resposta: a.resposta || '',
+          visivel: a.visivel,
+          data: new Date(a.data),
+          estabelecimentoId: estabId,
+        })));
+      }
+
+      if (notifsRes.data) {
+        setNotificacoes(notifsRes.data.map(n => ({
+          id: n.id,
+          tipo: n.tipo,
+          titulo: n.titulo,
+          mensagem: n.mensagem,
+          lida: n.lida,
+          data: new Date(n.data),
+          usuarioId: n.user_id,
+          estabelecimentoId: estabId,
+        })));
+      }
+    } catch (error) {
+      if (import.meta.env.DEV) {
+        console.error('Erro ao carregar dados:', error);
+      }
+    }
+  };
 
   // Auth functions
   const login = async (email: string, senha: string): Promise<boolean> => {
@@ -313,11 +462,17 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setUsuario(null);
     setUser(null);
     setSession(null);
+    setEstabelecimentoId(null);
     setClientes([]);
     setAgendamentos([]);
     setServicos([]);
     setTransacoes([]);
     setLembretes([]);
+    setBloqueios([]);
+    setListaEspera([]);
+    setProfissionais([]);
+    setAvaliacoes([]);
+    setNotificacoes([]);
   };
 
   const atualizarUsuario = async (dados: Partial<Usuario>) => {
@@ -346,171 +501,703 @@ export function AppProvider({ children }: { children: ReactNode }) {
   };
 
   // Cliente functions
-  const adicionarCliente = (clienteData: Omit<Cliente, 'id' | 'dataCadastro'>) => {
-    const novoCliente: Cliente = {
-      ...clienteData,
-      id: generateId(),
-      dataCadastro: new Date(),
-    };
-    setClientes(prev => [...prev, novoCliente]);
+  const adicionarCliente = async (clienteData: Omit<Cliente, 'id' | 'dataCadastro'>) => {
+    if (!estabelecimentoId) return;
+    
+    try {
+      const { data, error } = await supabase
+        .from('clientes')
+        .insert({
+          estabelecimento_id: estabelecimentoId,
+          nome: clienteData.nome,
+          telefone: clienteData.telefone,
+          email: clienteData.email,
+          data_nascimento: clienteData.dataNascimento?.toISOString().split('T')[0],
+          endereco: clienteData.endereco,
+          observacoes: clienteData.observacoes,
+          ativo: clienteData.status === 'ativo',
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+      if (data) await loadAllData(estabelecimentoId);
+    } catch (error) {
+      if (import.meta.env.DEV) {
+        console.error('Erro ao adicionar cliente:', error);
+      }
+    }
   };
 
-  const atualizarCliente = (id: string, dados: Partial<Cliente>) => {
-    setClientes(prev => prev.map(c => c.id === id ? { ...c, ...dados } : c));
+  const atualizarCliente = async (id: string, dados: Partial<Cliente>) => {
+    if (!estabelecimentoId) return;
+    
+    try {
+      const { error } = await supabase
+        .from('clientes')
+        .update({
+          nome: dados.nome,
+          telefone: dados.telefone,
+          email: dados.email,
+          data_nascimento: dados.dataNascimento?.toISOString().split('T')[0],
+          endereco: dados.endereco,
+          observacoes: dados.observacoes,
+          ativo: dados.status === 'ativo',
+          ultima_visita: dados.ultimoAtendimento?.toISOString(),
+          total_gasto: dados.totalGasto,
+        })
+        .eq('id', id);
+
+      if (error) throw error;
+      await loadAllData(estabelecimentoId);
+    } catch (error) {
+      if (import.meta.env.DEV) {
+        console.error('Erro ao atualizar cliente:', error);
+      }
+    }
   };
 
-  const removerCliente = (id: string) => {
-    setClientes(prev => prev.filter(c => c.id !== id));
+  const removerCliente = async (id: string) => {
+    if (!estabelecimentoId) return;
+    
+    try {
+      const { error } = await supabase
+        .from('clientes')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+      await loadAllData(estabelecimentoId);
+    } catch (error) {
+      if (import.meta.env.DEV) {
+        console.error('Erro ao remover cliente:', error);
+      }
+    }
   };
 
   // Agendamento functions
-  const adicionarAgendamento = (agendamentoData: Omit<Agendamento, 'id' | 'dataCriacao' | 'dataAtualizacao'>) => {
-    const novoAgendamento: Agendamento = {
-      ...agendamentoData,
-      id: generateId(),
-      dataCriacao: new Date(),
-      dataAtualizacao: new Date(),
-    };
-    setAgendamentos(prev => [...prev, novoAgendamento]);
+  const adicionarAgendamento = async (agendamentoData: Omit<Agendamento, 'id' | 'dataCriacao' | 'dataAtualizacao'>) => {
+    if (!estabelecimentoId) return;
+    
+    try {
+      const { data, error } = await supabase
+        .from('agendamentos')
+        .insert({
+          estabelecimento_id: estabelecimentoId,
+          cliente_id: agendamentoData.clienteId,
+          profissional_id: agendamentoData.profissionalId,
+          servico_id: agendamentoData.servicoId,
+          data_hora: agendamentoData.dataHora.toISOString(),
+          duracao: agendamentoData.duracao,
+          valor: agendamentoData.valor,
+          status: agendamentoData.status,
+          observacoes: agendamentoData.observacoes,
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+      if (data) await loadAllData(estabelecimentoId);
+    } catch (error) {
+      if (import.meta.env.DEV) {
+        console.error('Erro ao adicionar agendamento:', error);
+      }
+    }
   };
 
-  const atualizarAgendamento = (id: string, dados: Partial<Agendamento>) => {
-    setAgendamentos(prev => prev.map(a => 
-      a.id === id ? { ...a, ...dados, dataAtualizacao: new Date() } : a
-    ));
+  const atualizarAgendamento = async (id: string, dados: Partial<Agendamento>) => {
+    if (!estabelecimentoId) return;
+    
+    try {
+      const { error } = await supabase
+        .from('agendamentos')
+        .update({
+          cliente_id: dados.clienteId,
+          profissional_id: dados.profissionalId,
+          servico_id: dados.servicoId,
+          data_hora: dados.dataHora?.toISOString(),
+          duracao: dados.duracao,
+          valor: dados.valor,
+          status: dados.status,
+          observacoes: dados.observacoes,
+          confirmado: dados.status === 'confirmado',
+        })
+        .eq('id', id);
+
+      if (error) throw error;
+      await loadAllData(estabelecimentoId);
+    } catch (error) {
+      if (import.meta.env.DEV) {
+        console.error('Erro ao atualizar agendamento:', error);
+      }
+    }
   };
 
-  const removerAgendamento = (id: string) => {
-    setAgendamentos(prev => prev.filter(a => a.id !== id));
+  const removerAgendamento = async (id: string) => {
+    if (!estabelecimentoId) return;
+    
+    try {
+      const { error } = await supabase
+        .from('agendamentos')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+      await loadAllData(estabelecimentoId);
+    } catch (error) {
+      if (import.meta.env.DEV) {
+        console.error('Erro ao remover agendamento:', error);
+      }
+    }
   };
 
   // Servico functions
-  const adicionarServico = (servicoData: Omit<Servico, 'id'>) => {
-    const novoServico: Servico = {
-      ...servicoData,
-      id: generateId(),
-    };
-    setServicos(prev => [...prev, novoServico]);
+  const adicionarServico = async (servicoData: Omit<Servico, 'id'>) => {
+    if (!estabelecimentoId) return;
+    
+    try {
+      const { data, error } = await supabase
+        .from('servicos')
+        .insert({
+          estabelecimento_id: estabelecimentoId,
+          nome: servicoData.nome,
+          descricao: servicoData.descricao,
+          duracao: servicoData.duracao,
+          valor: servicoData.valor,
+          categoria: servicoData.categoria,
+          ativo: servicoData.ativo,
+          profissionais_ids: servicoData.profissionaisIds,
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+      if (data) await loadAllData(estabelecimentoId);
+    } catch (error) {
+      if (import.meta.env.DEV) {
+        console.error('Erro ao adicionar serviço:', error);
+      }
+    }
   };
 
-  const atualizarServico = (id: string, dados: Partial<Servico>) => {
-    setServicos(prev => prev.map(s => s.id === id ? { ...s, ...dados } : s));
+  const atualizarServico = async (id: string, dados: Partial<Servico>) => {
+    if (!estabelecimentoId) return;
+    
+    try {
+      const { error } = await supabase
+        .from('servicos')
+        .update({
+          nome: dados.nome,
+          descricao: dados.descricao,
+          duracao: dados.duracao,
+          valor: dados.valor,
+          categoria: dados.categoria,
+          ativo: dados.ativo,
+          profissionais_ids: dados.profissionaisIds,
+        })
+        .eq('id', id);
+
+      if (error) throw error;
+      await loadAllData(estabelecimentoId);
+    } catch (error) {
+      if (import.meta.env.DEV) {
+        console.error('Erro ao atualizar serviço:', error);
+      }
+    }
   };
 
-  const removerServico = (id: string) => {
-    setServicos(prev => prev.filter(s => s.id !== id));
+  const removerServico = async (id: string) => {
+    if (!estabelecimentoId) return;
+    
+    try {
+      const { error } = await supabase
+        .from('servicos')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+      await loadAllData(estabelecimentoId);
+    } catch (error) {
+      if (import.meta.env.DEV) {
+        console.error('Erro ao remover serviço:', error);
+      }
+    }
   };
 
   // Transacao functions
-  const adicionarTransacao = (transacaoData: Omit<Transacao, 'id'>) => {
-    const novaTransacao: Transacao = {
-      ...transacaoData,
-      id: generateId(),
-    };
-    setTransacoes(prev => [...prev, novaTransacao]);
+  const adicionarTransacao = async (transacaoData: Omit<Transacao, 'id'>) => {
+    if (!estabelecimentoId) return;
+    
+    try {
+      const { data, error } = await supabase
+        .from('transacoes')
+        .insert({
+          estabelecimento_id: estabelecimentoId,
+          tipo: transacaoData.tipo === 'receita' ? 'entrada' : 'saida',
+          categoria: transacaoData.categoria,
+          valor: transacaoData.valor,
+          descricao: transacaoData.descricao,
+          data: transacaoData.data.toISOString(),
+          forma_pagamento: transacaoData.metodoPagamento,
+          profissional_id: transacaoData.profissionalId,
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+      if (data) await loadAllData(estabelecimentoId);
+    } catch (error) {
+      if (import.meta.env.DEV) {
+        console.error('Erro ao adicionar transação:', error);
+      }
+    }
   };
 
-  const atualizarTransacao = (id: string, dados: Partial<Transacao>) => {
-    setTransacoes(prev => prev.map(t => t.id === id ? { ...t, ...dados } : t));
+  const atualizarTransacao = async (id: string, dados: Partial<Transacao>) => {
+    if (!estabelecimentoId) return;
+    
+    try {
+      const { error } = await supabase
+        .from('transacoes')
+        .update({
+          tipo: dados.tipo === 'receita' ? 'entrada' : 'saida',
+          categoria: dados.categoria,
+          valor: dados.valor,
+          descricao: dados.descricao,
+          data: dados.data?.toISOString(),
+          forma_pagamento: dados.metodoPagamento,
+          profissional_id: dados.profissionalId,
+        })
+        .eq('id', id);
+
+      if (error) throw error;
+      await loadAllData(estabelecimentoId);
+    } catch (error) {
+      if (import.meta.env.DEV) {
+        console.error('Erro ao atualizar transação:', error);
+      }
+    }
   };
 
-  const removerTransacao = (id: string) => {
-    setTransacoes(prev => prev.filter(t => t.id !== id));
+  const removerTransacao = async (id: string) => {
+    if (!estabelecimentoId) return;
+    
+    try {
+      const { error } = await supabase
+        .from('transacoes')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+      await loadAllData(estabelecimentoId);
+    } catch (error) {
+      if (import.meta.env.DEV) {
+        console.error('Erro ao remover transação:', error);
+      }
+    }
   };
 
   // Lembrete functions
-  const adicionarLembrete = (lembreteData: Omit<Lembrete, 'id'>) => {
-    const novoLembrete: Lembrete = {
-      ...lembreteData,
-      id: generateId(),
-    };
-    setLembretes(prev => [...prev, novoLembrete]);
+  const adicionarLembrete = async (lembreteData: Omit<Lembrete, 'id'>) => {
+    if (!estabelecimentoId) return;
+    
+    try {
+      const { data, error } = await supabase
+        .from('lembretes')
+        .insert({
+          estabelecimento_id: estabelecimentoId,
+          tipo: lembreteData.tipo,
+          titulo: lembreteData.titulo,
+          descricao: lembreteData.descricao,
+          data_lembrete: lembreteData.dataLembrete.toISOString(),
+          enviado: lembreteData.notificado,
+          cliente_id: lembreteData.clienteId,
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+      if (data) await loadAllData(estabelecimentoId);
+    } catch (error) {
+      if (import.meta.env.DEV) {
+        console.error('Erro ao adicionar lembrete:', error);
+      }
+    }
   };
 
-  const atualizarLembrete = (id: string, dados: Partial<Lembrete>) => {
-    setLembretes(prev => prev.map(l => l.id === id ? { ...l, ...dados } : l));
+  const atualizarLembrete = async (id: string, dados: Partial<Lembrete>) => {
+    if (!estabelecimentoId) return;
+    
+    try {
+      const { error } = await supabase
+        .from('lembretes')
+        .update({
+          tipo: dados.tipo,
+          titulo: dados.titulo,
+          descricao: dados.descricao,
+          data_lembrete: dados.dataLembrete?.toISOString(),
+          enviado: dados.notificado,
+          cliente_id: dados.clienteId,
+        })
+        .eq('id', id);
+
+      if (error) throw error;
+      await loadAllData(estabelecimentoId);
+    } catch (error) {
+      if (import.meta.env.DEV) {
+        console.error('Erro ao atualizar lembrete:', error);
+      }
+    }
   };
 
-  const removerLembrete = (id: string) => {
-    setLembretes(prev => prev.filter(l => l.id !== id));
+  const removerLembrete = async (id: string) => {
+    if (!estabelecimentoId) return;
+    
+    try {
+      const { error } = await supabase
+        .from('lembretes')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+      await loadAllData(estabelecimentoId);
+    } catch (error) {
+      if (import.meta.env.DEV) {
+        console.error('Erro ao remover lembrete:', error);
+      }
+    }
   };
 
   // Bloqueio functions
-  const adicionarBloqueio = (bloqueioData: Omit<Bloqueio, 'id' | 'dataCriacao'>) => {
-    const novoBloqueio: Bloqueio = {
-      ...bloqueioData,
-      id: generateId(),
-      dataCriacao: new Date(),
-    };
-    setBloqueios(prev => [...prev, novoBloqueio]);
+  const adicionarBloqueio = async (bloqueioData: Omit<Bloqueio, 'id' | 'dataCriacao'>) => {
+    if (!estabelecimentoId) return;
+    
+    try {
+      const inicio = new Date(bloqueioData.dataInicio);
+      inicio.setHours(parseInt(bloqueioData.horaInicio.split(':')[0]), parseInt(bloqueioData.horaInicio.split(':')[1]));
+      
+      const fim = new Date(bloqueioData.dataFim);
+      fim.setHours(parseInt(bloqueioData.horaFim.split(':')[0]), parseInt(bloqueioData.horaFim.split(':')[1]));
+      
+      const { data, error } = await supabase
+        .from('bloqueios')
+        .insert({
+          estabelecimento_id: estabelecimentoId,
+          profissional_id: bloqueioData.profissionalId,
+          data_inicio: inicio.toISOString(),
+          data_fim: fim.toISOString(),
+          motivo: bloqueioData.motivo,
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+      if (data) await loadAllData(estabelecimentoId);
+    } catch (error) {
+      if (import.meta.env.DEV) {
+        console.error('Erro ao adicionar bloqueio:', error);
+      }
+    }
   };
 
-  const atualizarBloqueio = (id: string, dados: Partial<Bloqueio>) => {
-    setBloqueios(prev => prev.map(b => b.id === id ? { ...b, ...dados } : b));
+  const atualizarBloqueio = async (id: string, dados: Partial<Bloqueio>) => {
+    if (!estabelecimentoId) return;
+    
+    try {
+      const updateData: any = {};
+      
+      if (dados.dataInicio && dados.horaInicio) {
+        const inicio = new Date(dados.dataInicio);
+        inicio.setHours(parseInt(dados.horaInicio.split(':')[0]), parseInt(dados.horaInicio.split(':')[1]));
+        updateData.data_inicio = inicio.toISOString();
+      }
+      
+      if (dados.dataFim && dados.horaFim) {
+        const fim = new Date(dados.dataFim);
+        fim.setHours(parseInt(dados.horaFim.split(':')[0]), parseInt(dados.horaFim.split(':')[1]));
+        updateData.data_fim = fim.toISOString();
+      }
+      
+      if (dados.motivo !== undefined) updateData.motivo = dados.motivo;
+      if (dados.profissionalId) updateData.profissional_id = dados.profissionalId;
+      
+      const { error } = await supabase
+        .from('bloqueios')
+        .update(updateData)
+        .eq('id', id);
+
+      if (error) throw error;
+      await loadAllData(estabelecimentoId);
+    } catch (error) {
+      if (import.meta.env.DEV) {
+        console.error('Erro ao atualizar bloqueio:', error);
+      }
+    }
   };
 
-  const removerBloqueio = (id: string) => {
-    setBloqueios(prev => prev.filter(b => b.id !== id));
+  const removerBloqueio = async (id: string) => {
+    if (!estabelecimentoId) return;
+    
+    try {
+      const { error } = await supabase
+        .from('bloqueios')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+      await loadAllData(estabelecimentoId);
+    } catch (error) {
+      if (import.meta.env.DEV) {
+        console.error('Erro ao remover bloqueio:', error);
+      }
+    }
   };
 
   // Lista de Espera functions
-  const adicionarListaEspera = (itemData: Omit<ListaEspera, 'id' | 'dataCriacao'>) => {
-    const novoItem: ListaEspera = {
-      ...itemData,
-      id: generateId(),
-      dataCriacao: new Date(),
-    };
-    setListaEspera(prev => [...prev, novoItem]);
+  const adicionarListaEspera = async (itemData: Omit<ListaEspera, 'id' | 'dataCriacao'>) => {
+    if (!estabelecimentoId) return;
+    
+    try {
+      const { data, error } = await supabase
+        .from('lista_espera')
+        .insert({
+          estabelecimento_id: estabelecimentoId,
+          cliente_id: itemData.clienteId,
+          servico_id: itemData.servicoId,
+          periodo_preferencia: itemData.preferenciaHorario,
+          observacoes: itemData.observacoes,
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+      if (data) await loadAllData(estabelecimentoId);
+    } catch (error) {
+      if (import.meta.env.DEV) {
+        console.error('Erro ao adicionar à lista de espera:', error);
+      }
+    }
   };
 
-  const removerListaEspera = (id: string) => {
-    setListaEspera(prev => prev.filter(item => item.id !== id));
+  const removerListaEspera = async (id: string) => {
+    if (!estabelecimentoId) return;
+    
+    try {
+      const { error } = await supabase
+        .from('lista_espera')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+      await loadAllData(estabelecimentoId);
+    } catch (error) {
+      if (import.meta.env.DEV) {
+        console.error('Erro ao remover da lista de espera:', error);
+      }
+    }
   };
 
   // Profissional functions
-  const adicionarProfissional = (profissionalData: Omit<Profissional, 'id' | 'dataCadastro'>) => {
-    const novoProfissional: Profissional = {
-      ...profissionalData,
-      id: generateId(),
-      dataCadastro: new Date(),
-    };
-    setProfissionais(prev => [...prev, novoProfissional]);
+  const adicionarProfissional = async (profissionalData: Omit<Profissional, 'id' | 'dataCadastro'>) => {
+    if (!estabelecimentoId) return;
+    
+    try {
+      const { data, error } = await supabase
+        .from('profissionais')
+        .insert({
+          estabelecimento_id: estabelecimentoId,
+          nome: profissionalData.nome,
+          telefone: profissionalData.telefone,
+          email: profissionalData.email,
+          ativo: profissionalData.ativo,
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+      if (data) await loadAllData(estabelecimentoId);
+    } catch (error) {
+      if (import.meta.env.DEV) {
+        console.error('Erro ao adicionar profissional:', error);
+      }
+    }
   };
 
-  const atualizarProfissional = (id: string, dados: Partial<Profissional>) => {
-    setProfissionais(prev => prev.map(p => p.id === id ? { ...p, ...dados } : p));
+  const atualizarProfissional = async (id: string, dados: Partial<Profissional>) => {
+    if (!estabelecimentoId) return;
+    
+    try {
+      const { error } = await supabase
+        .from('profissionais')
+        .update({
+          nome: dados.nome,
+          telefone: dados.telefone,
+          email: dados.email,
+          ativo: dados.ativo,
+        })
+        .eq('id', id);
+
+      if (error) throw error;
+      await loadAllData(estabelecimentoId);
+    } catch (error) {
+      if (import.meta.env.DEV) {
+        console.error('Erro ao atualizar profissional:', error);
+      }
+    }
   };
 
-  const removerProfissional = (id: string) => {
-    setProfissionais(prev => prev.filter(p => p.id !== id));
+  const removerProfissional = async (id: string) => {
+    if (!estabelecimentoId) return;
+    
+    try {
+      const { error } = await supabase
+        .from('profissionais')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+      await loadAllData(estabelecimentoId);
+    } catch (error) {
+      if (import.meta.env.DEV) {
+        console.error('Erro ao remover profissional:', error);
+      }
+    }
   };
 
   // Avaliacao functions
-  const adicionarAvaliacao = (avaliacao: Avaliacao) => {
-    setAvaliacoes(prev => [...prev, avaliacao]);
+  const adicionarAvaliacao = async (avaliacaoData: Avaliacao) => {
+    if (!estabelecimentoId) return;
+    
+    try {
+      const { data, error } = await supabase
+        .from('avaliacoes')
+        .insert({
+          estabelecimento_id: estabelecimentoId,
+          cliente_id: avaliacaoData.clienteId,
+          agendamento_id: avaliacaoData.agendamentoId,
+          profissional_id: avaliacaoData.profissionalId,
+          servico_id: avaliacaoData.servicoId,
+          nota: avaliacaoData.nota,
+          comentario: avaliacaoData.comentario,
+          visivel: avaliacaoData.visivel,
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+      if (data) await loadAllData(estabelecimentoId);
+    } catch (error) {
+      if (import.meta.env.DEV) {
+        console.error('Erro ao adicionar avaliação:', error);
+      }
+    }
   };
 
-  const atualizarAvaliacao = (id: string, dados: Partial<Avaliacao>) => {
-    setAvaliacoes(prev => prev.map(a => a.id === id ? { ...a, ...dados } : a));
+  const atualizarAvaliacao = async (id: string, dados: Partial<Avaliacao>) => {
+    if (!estabelecimentoId) return;
+    
+    try {
+      const { error } = await supabase
+        .from('avaliacoes')
+        .update({
+          nota: dados.nota,
+          comentario: dados.comentario,
+          resposta: dados.resposta,
+          visivel: dados.visivel,
+        })
+        .eq('id', id);
+
+      if (error) throw error;
+      await loadAllData(estabelecimentoId);
+    } catch (error) {
+      if (import.meta.env.DEV) {
+        console.error('Erro ao atualizar avaliação:', error);
+      }
+    }
   };
 
   // Notificacao functions
-  const adicionarNotificacao = (notificacao: Notificacao) => {
-    setNotificacoes(prev => [notificacao, ...prev]);
+  const adicionarNotificacao = async (notificacaoData: Notificacao) => {
+    if (!user?.id) return;
+    
+    try {
+      const { data, error } = await supabase
+        .from('notificacoes')
+        .insert({
+          user_id: user.id,
+          tipo: notificacaoData.tipo,
+          titulo: notificacaoData.titulo,
+          mensagem: notificacaoData.mensagem,
+          lida: false,
+          data: new Date().toISOString(),
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+      if (data && estabelecimentoId) await loadAllData(estabelecimentoId);
+    } catch (error) {
+      if (import.meta.env.DEV) {
+        console.error('Erro ao adicionar notificação:', error);
+      }
+    }
   };
 
-  const marcarNotificacaoLida = (id: string) => {
-    setNotificacoes(prev => prev.map(n => n.id === id ? { ...n, lida: true } : n));
+  const marcarNotificacaoLida = async (id: string) => {
+    try {
+      const { error } = await supabase
+        .from('notificacoes')
+        .update({ lida: true })
+        .eq('id', id);
+
+      if (error) throw error;
+      if (estabelecimentoId) await loadAllData(estabelecimentoId);
+    } catch (error) {
+      if (import.meta.env.DEV) {
+        console.error('Erro ao marcar notificação como lida:', error);
+      }
+    }
   };
 
-  const marcarTodasLidas = () => {
-    setNotificacoes(prev => prev.map(n => ({ ...n, lida: true })));
+  const marcarTodasLidas = async () => {
+    if (!user?.id) return;
+    
+    try {
+      const { error } = await supabase
+        .from('notificacoes')
+        .update({ lida: true })
+        .eq('user_id', user.id);
+
+      if (error) throw error;
+      if (estabelecimentoId) await loadAllData(estabelecimentoId);
+    } catch (error) {
+      if (import.meta.env.DEV) {
+        console.error('Erro ao marcar todas como lidas:', error);
+      }
+    }
   };
 
-  const limparNotificacoesAntigas = () => {
-    const seteDiasAtras = new Date();
-    seteDiasAtras.setDate(seteDiasAtras.getDate() - 7);
-    setNotificacoes(prev => prev.filter(n => n.data > seteDiasAtras || !n.lida));
+  const limparNotificacoesAntigas = async () => {
+    if (!user?.id) return;
+    
+    try {
+      const seteDiasAtras = new Date();
+      seteDiasAtras.setDate(seteDiasAtras.getDate() - 7);
+
+      const { error } = await supabase
+        .from('notificacoes')
+        .delete()
+        .eq('user_id', user.id)
+        .eq('lida', true)
+        .lt('data', seteDiasAtras.toISOString());
+
+      if (error) throw error;
+      if (estabelecimentoId) await loadAllData(estabelecimentoId);
+    } catch (error) {
+      if (import.meta.env.DEV) {
+        console.error('Erro ao limpar notificações antigas:', error);
+      }
+    }
   };
 
   const value = {
