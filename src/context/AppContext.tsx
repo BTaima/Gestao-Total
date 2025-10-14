@@ -188,9 +188,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
         };
         setUsuario(usuarioData);
       }
-    } catch (error) {
-      console.error('Erro ao carregar perfil:', error);
-    }
+      } catch (error) {
+        if (import.meta.env.DEV) {
+          console.error('Erro ao carregar perfil:', error);
+        }
+      }
   };
 
   // Load data on mount
@@ -262,7 +264,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
       if (error) throw error;
       return !!data.user;
     } catch (error) {
-      console.error('Erro no login:', error);
+      if (import.meta.env.DEV) {
+        console.error('Erro no login:', error);
+      }
       return false;
     }
   };
@@ -297,7 +301,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
       if (error) throw error;
       return !!data.user;
     } catch (error) {
-      console.error('Erro no cadastro:', error);
+      if (import.meta.env.DEV) {
+        console.error('Erro no cadastro:', error);
+      }
       return false;
     }
   };
@@ -333,7 +339,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
       const usuarioAtualizado = { ...usuario, ...dados };
       setUsuario(usuarioAtualizado);
     } catch (error) {
-      console.error('Erro ao atualizar usuário:', error);
+      if (import.meta.env.DEV) {
+        console.error('Erro ao atualizar usuário:', error);
+      }
     }
   };
 
