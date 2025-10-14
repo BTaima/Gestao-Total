@@ -4,27 +4,35 @@ import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
-import { Plus, Search, User } from 'lucide-react';
+import { Plus, Search, User, Edit, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { useApp } from '@/context/AppContext';
 
 export default function Profissionais() {
+  const { profissionais, adicionarProfissional, atualizarProfissional, removerProfissional } = useApp();
   const [busca, setBusca] = useState('');
   const [modalAberto, setModalAberto] = useState(false);
+  const [editando, setEditando] = useState<any>(null);
   const [formData, setFormData] = useState({
     nome: '',
     email: '',
     telefone: '',
-    senha: ''
+    ativo: true,
   });
 
-  const handleAdicionar = () => {
-    if (!formData.nome || !formData.email || !formData.telefone) {
-      toast.error('Preencha todos os campos obrigatórios');
+  const handleSalvar = async () => {
+    if (!formData.nome) {
+      toast.error('Informe o nome');
       return;
     }
-    toast.success('Profissional adicionado com sucesso!');
+    if (editando) {
+      await atualizarProfissional(editando.id, formData as any);
+      toast.success('Profissional atualizado');
+    } else {
+      await adicionarProfissional(formData as any);
+      toast.success('Profissional adicionado');
+    }
     setModalAberto(false);
-    setFormData({ nome: '', email: '', telefone: '', senha: '' });
   };
 
   return (
@@ -36,7 +44,7 @@ export default function Profissionais() {
             <h1 className="text-2xl font-bold">Profissionais</h1>
             <p className="text-muted-foreground">Gerencie sua equipe</p>
           </div>
-          <Button onClick={() => setModalAberto(true)} className="gap-2">
+          <Button onClick={() => { setEditando(null); setFormData({ nome: '', email: '', telefone: '', ativo: true }); setModalAberto(true); }} className="gap-2">
             <Plus className="w-4 h-4" />
             Adicionar
           </Button>
@@ -55,33 +63,57 @@ export default function Profissionais() {
 
         {/* Lista de Profissionais */}
         <div className="space-y-4">
-          <Card className="p-6">
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
-                <User className="w-6 h-6 text-primary" />
-              </div>
-              <div className="flex-1">
-                <h3 className="font-semibold">Você (Administrador)</h3>
-                <p className="text-sm text-muted-foreground">Acesso total ao sistema</p>
-              </div>
-            </div>
-          </Card>
+          {profissionais
+            .filter(p => p.nome.toLowerCase().includes(busca.toLowerCase()))
+            .map((p) => (
+              <Card key={p.id} className="p-6">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
+                      <User className="w-6 h-6 text-primary" />
+                    </div>
+                    <div>
+                      <h3 className="font-semibold">{p.nome}</h3>
+                      <p className="text-sm text-muted-foreground">{p.email} {p.telefone ? `• ${p.telefone}` : ''}</p>
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => { setEditando(p); setFormData({ nome: p.nome, email: p.email, telefone: p.telefone, ativo: p.ativo }); setModalAberto(true); }}
+                    >
+                      <Edit className="w-4 h-4 mr-1" />Editar
+                    </Button>
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={async () => { if (confirm('Remover profissional?')) { await removerProfissional(p.id); toast.success('Profissional removido'); } }}
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </div>
+              </Card>
+            ))}
 
-          <div className="text-center py-12">
-            <User className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
-            <p className="text-muted-foreground mb-4">Nenhum profissional cadastrado</p>
-            <Button onClick={() => setModalAberto(true)} variant="outline">
-              Adicionar Primeiro Profissional
-            </Button>
-          </div>
+          {profissionais.length === 0 && (
+            <div className="text-center py-12">
+              <User className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
+              <p className="text-muted-foreground mb-4">Nenhum profissional cadastrado</p>
+              <Button onClick={() => setModalAberto(true)} variant="outline">
+                Adicionar Primeiro Profissional
+              </Button>
+            </div>
+          )}
         </div>
       </div>
 
-      {/* Modal Adicionar Profissional */}
+      {/* Modal Adicionar/Editar Profissional */}
       <Dialog open={modalAberto} onOpenChange={setModalAberto}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Adicionar Profissional</DialogTitle>
+            <DialogTitle>{editando ? 'Editar Profissional' : 'Adicionar Profissional'}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <div>
@@ -109,16 +141,8 @@ export default function Profissionais() {
                 placeholder="(00) 00000-0000"
               />
             </div>
-            <div>
-              <Label>Senha Temporária</Label>
-              <Input
-                value={formData.senha}
-                onChange={(e) => setFormData({ ...formData, senha: e.target.value })}
-                placeholder="Senha inicial"
-              />
-            </div>
-            <Button onClick={handleAdicionar} className="w-full">
-              Cadastrar Profissional
+            <Button onClick={handleSalvar} className="w-full">
+              {editando ? 'Salvar Alterações' : 'Cadastrar Profissional'}
             </Button>
           </div>
         </DialogContent>

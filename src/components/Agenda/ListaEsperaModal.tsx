@@ -23,7 +23,7 @@ export function ListaEsperaModal({
   clientes,
   servicos
 }: ListaEsperaModalProps) {
-  const { listaEspera, adicionarListaEspera, removerListaEspera } = useApp();
+  const { listaEspera, adicionarListaEspera, removerListaEspera, adicionarAgendamento, usuario } = useApp();
   const [mostrarForm, setMostrarForm] = useState(false);
   const [clienteId, setClienteId] = useState('');
   const [servicoId, setServicoId] = useState('');
@@ -115,11 +115,22 @@ export function ListaEsperaModal({
                           size="sm"
                           className="flex-1 bg-green-500 hover:bg-green-600"
                           onClick={() => {
-                            /* TODO: Abrir modal de agendamento com dados preenchidos */
-                            toast({
-                              title: 'Em breve',
-                              description: 'Funcionalidade de agendar direto será implementada.',
+                            if (!cliente || !servico || !usuario) return;
+                            const agora = new Date();
+                            adicionarAgendamento({
+                              clienteId: cliente.id,
+                              servicoId: servico.id,
+                              profissionalId: usuario.id,
+                              dataHora: agora,
+                              duracao: servico.duracao,
+                              status: 'agendado',
+                              valor: servico.valor,
+                              pagamentoAntecipado: false,
+                              pagamentoStatus: 'pendente',
+                              observacoes: item.observacoes || '',
+                              estabelecimentoId: usuario.estabelecimentoId,
                             });
+                            toast({ title: 'Agendado', description: 'Agendamento criado a partir da lista de espera.' });
                           }}
                         >
                           <CheckCircle className="w-4 h-4 mr-2" />

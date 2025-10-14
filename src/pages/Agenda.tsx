@@ -50,7 +50,13 @@ export default function Agenda() {
   };
 
   const handleAgendamentoClick = (agendamento: Agendamento) => {
-    // TODO: Abrir modal de detalhes/edição do agendamento
+    // If clicking on empty slot (synthetic id), open create modal preset to that time
+    if (agendamento.id.startsWith('slot-')) {
+      setModalNovoAgendamento(true);
+      setDataSelecionada(new Date(agendamento.dataHora));
+      return;
+    }
+    // Future: open edit details modal
     console.log('Agendamento clicado:', agendamento);
   };
 

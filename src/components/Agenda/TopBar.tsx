@@ -1,10 +1,12 @@
-import { Menu, Globe, Megaphone, Calendar as CalendarIcon, Search, BookOpen } from 'lucide-react';
+import { Menu, Globe, Megaphone, Calendar as CalendarIcon, Search, BookOpen, Download } from 'lucide-react';
+import { useApp } from '@/context/AppContext';
 
 interface TopBarProps {
   onMenuClick: () => void;
 }
 
 export function TopBar({ onMenuClick }: TopBarProps) {
+  const { importarGoogleEventosComoBloqueio } = useApp();
   return (
     <div className="bg-white border-b sticky top-0 z-30">
       <div className="flex items-center justify-between px-4 py-3">
@@ -16,6 +18,13 @@ export function TopBar({ onMenuClick }: TopBarProps) {
         </button>
 
         <div className="flex items-center gap-3">
+          <button
+            onClick={async () => { try { const n = await importarGoogleEventosComoBloqueio(); if (n > 0) alert(`Importados ${n} eventos do Google`); else alert('Nada importado'); } catch {} }}
+            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+            title="Importar Google Calendar"
+          >
+            <Download className="w-5 h-5 text-primary" />
+          </button>
           <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
             <Globe className="w-5 h-5 text-primary" />
           </button>

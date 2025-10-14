@@ -19,6 +19,7 @@ interface AppContextType {
   
   // Auth
   login: (email: string, senha: string) => Promise<boolean>;
+  loginComGoogle: () => Promise<boolean>;
   cadastrar: (dados: {
     nome: string;
     email: string;
@@ -30,6 +31,9 @@ interface AppContextType {
   }) => Promise<boolean>;
   logout: () => void;
   atualizarUsuario: (usuario: Partial<Usuario>) => void;
+  vincularClientePorCodigo: (codigo: string) => Promise<boolean>;
+  regenerarCodigoAcesso: () => Promise<string | null>;
+  importarGoogleEventosComoBloqueio: () => Promise<number>;
   
   // Clientes
   adicionarCliente: (cliente: Omit<Cliente, 'id' | 'dataCadastro'>) => Promise<void>;
@@ -194,6 +198,18 @@ export function AppProvider({ children }: { children: ReactNode }) {
           estabelecimentoIdValue = newEstab?.id;
         }
 
+        // If user is not owner/admin, use linked establishment from profile
+        if (!estabelecimentoIdValue && (profile as any).estabelecimento_id) {
+          estabelecimentoIdValue = (profile as any).estabelecimento_id as string;
+        }
+
+        // Ensure profile references establishment
+        if (estabelecimentoIdValue && profile.estabelecimento_id !== estabelecimentoIdValue) {
+          await supabase.from('profiles')
+            .update({ estabelecimento_id: estabelecimentoIdValue })
+            .eq('id', userId);
+        }
+
         const usuarioData: Usuario = {
           id: profile.id,
           nome: profile.nome_completo,
@@ -208,7 +224,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
           nomeNegocio: profile.nome_estabelecimento || '',
           configuracoes: defaultConfiguracoes,
           onboardingCompleto: true,
-          setupCompleto: true,
+          setupCompleto: Boolean(profile.nome_estabelecimento),
         };
         setUsuario(usuarioData);
         setEstabelecimentoId(estabelecimentoIdValue);
@@ -420,6 +436,27 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const loginComGoogle = async (): Promise<boolean> => {
+    try {
+      const redirectTo = window.location.origin;
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo,
+          scopes: 'https://www.googleapis.com/auth/calendar.events https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/userinfo.profile',
+          queryParams: { access_type: 'offline', prompt: 'consent' },
+        },
+      });
+      if (error) throw error;
+      return !!data.url; // redirecionamento iniciado
+    } catch (error) {
+      if (import.meta.env.DEV) {
+        console.error('Erro no login Google:', error);
+      }
+      return false;
+    }
+  };
+
   const cadastrar = async (dados: {
     nome: string;
     email: string;
@@ -475,6 +512,85 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setNotificacoes([]);
   };
 
+  // Import Google Calendar events as schedule blocks for next 30 days
+  const importarGoogleEventosComoBloqueio = async (): Promise<number> => {
+    if (!estabelecimentoId || !user?.id) return 0;
+    try {
+      const { data: sess } = await supabase.auth.getSession();
+      const token = (sess.session as any)?.provider_token as string | undefined;
+      if (!token) return 0;
+
+      // Ensure we have a profissional record for this user
+      let profissionalId: string | null = null;
+      const { data: prof } = await supabase
+        .from('profissionais')
+        .select('id')
+        .eq('user_id', user.id)
+        .maybeSingle();
+      if (prof?.id) {
+        profissionalId = prof.id;
+      } else {
+        // Create a basic professional linked to user
+        const { data: profile } = await supabase.from('profiles').select('*').eq('id', user.id).single();
+        const { data: created } = await supabase
+          .from('profissionais')
+          .insert({
+            estabelecimento_id: estabelecimentoId,
+            user_id: user.id,
+            nome: profile?.nome_completo || 'Profissional',
+            telefone: profile?.telefone || null,
+            email: (await supabase.auth.getUser()).data.user?.email || null,
+            ativo: true,
+          })
+          .select('id')
+          .single();
+        profissionalId = created?.id || null;
+      }
+      if (!profissionalId) return 0;
+
+      const timeMin = new Date();
+      const timeMax = new Date();
+      timeMax.setDate(timeMax.getDate() + 30);
+      const resp = await fetch(`https://www.googleapis.com/calendar/v3/calendars/primary/events?singleEvents=true&orderBy=startTime&timeMin=${encodeURIComponent(timeMin.toISOString())}&timeMax=${encodeURIComponent(timeMax.toISOString())}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const json = await resp.json();
+      const items = json?.items || [];
+      let createdCount = 0;
+      for (const ev of items) {
+        const startStr = ev.start?.dateTime;
+        const endStr = ev.end?.dateTime;
+        if (!startStr || !endStr) continue;
+        const start = new Date(startStr);
+        const end = new Date(endStr);
+        // Skip if existing block with same google_event_id
+        const { data: exists } = await supabase
+          .from('bloqueios')
+          .select('id')
+          .eq('google_event_id', ev.id)
+          .maybeSingle();
+        if (exists) continue;
+
+        const { error } = await supabase.from('bloqueios').insert({
+          estabelecimento_id: estabelecimentoId,
+          profissional_id: profissionalId,
+          data_inicio: start.toISOString(),
+          data_fim: end.toISOString(),
+          motivo: ev.summary || 'Indisponível (Google)',
+          google_event_id: ev.id,
+        } as any);
+        if (!error) createdCount++;
+      }
+      await loadAllData(estabelecimentoId);
+      return createdCount;
+    } catch (error) {
+      if (import.meta.env.DEV) {
+        console.error('Erro ao importar eventos do Google:', error);
+      }
+      return 0;
+    }
+  };
+
   const atualizarUsuario = async (dados: Partial<Usuario>) => {
     if (!usuario || !user) return;
     
@@ -497,6 +613,69 @@ export function AppProvider({ children }: { children: ReactNode }) {
       if (import.meta.env.DEV) {
         console.error('Erro ao atualizar usuário:', error);
       }
+    }
+  };
+
+  // Vincular cliente a um estabelecimento através de código do admin
+  const vincularClientePorCodigo = async (codigo: string): Promise<boolean> => {
+    if (!user?.id) return false;
+    try {
+      const { data: estab } = await supabase
+        .from('estabelecimentos')
+        .select('id')
+        .eq('codigo_acesso', codigo)
+        .single();
+      if (!estab) return false;
+
+      // Atualiza profile com estabelecimento e cria cliente se não existir
+      await supabase.from('profiles')
+        .update({ estabelecimento_id: estab.id })
+        .eq('id', user.id);
+
+      const { data: clienteExist } = await supabase
+        .from('clientes')
+        .select('id')
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+      if (!clienteExist) {
+        // Criar cliente básico a partir do profile
+        const { data: profile } = await supabase.from('profiles').select('*').eq('id', user.id).single();
+        await supabase.from('clientes').insert({
+          estabelecimento_id: estab.id,
+          user_id: user.id,
+          nome: profile?.nome_completo || 'Cliente',
+          telefone: profile?.telefone || '',
+          email: (await supabase.auth.getUser()).data.user?.email || null,
+          ativo: true,
+        });
+      }
+
+      // Recarrega contexto
+      setEstabelecimentoId(estab.id);
+      await loadAllData(estab.id);
+      return true;
+    } catch (error) {
+      if (import.meta.env.DEV) console.error('Erro ao vincular cliente por código:', error);
+      return false;
+    }
+  };
+
+  const regenerarCodigoAcesso = async (): Promise<string | null> => {
+    if (!user?.id || !estabelecimentoId) return null;
+    try {
+      // Gera novo código no backend utilizando função SQL simples
+      const novoCodigo = Math.random().toString(36).slice(2, 10);
+      const { error } = await supabase
+        .from('estabelecimentos')
+        .update({ codigo_acesso: novoCodigo })
+        .eq('id', estabelecimentoId)
+        .eq('user_id', user.id);
+      if (error) throw error;
+      return novoCodigo;
+    } catch (error) {
+      if (import.meta.env.DEV) console.error('Erro ao regenerar código:', error);
+      return null;
     }
   };
 
@@ -1217,6 +1396,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
     cadastrar,
     logout,
     atualizarUsuario,
+    loginComGoogle,
+    vincularClientePorCodigo,
+    regenerarCodigoAcesso,
     adicionarCliente,
     atualizarCliente,
     removerCliente,

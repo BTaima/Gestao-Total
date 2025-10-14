@@ -133,7 +133,20 @@ export function GradeHorarios({
                     <span className="text-xs text-gray-600 font-medium">Bloqueado</span>
                   </div>
                 ) : (
-                  <div className="h-full hover:bg-gray-100 rounded mr-2 transition-colors cursor-pointer" />
+                  <div
+                    className="h-full hover:bg-gray-100 rounded mr-2 transition-colors cursor-pointer"
+                    onClick={() => {
+                      // Emit a synthetic agendamento with slot start time for caller to open modal
+                      const [hour, min] = timeStr.split(':').map(Number);
+                      const slotTime = new Date(data);
+                      slotTime.setHours(hour, min, 0, 0);
+                      const fake = {
+                        id: `slot-${timeStr}`,
+                        dataHora: slotTime,
+                      } as unknown as Agendamento;
+                      onAgendamentoClick(fake);
+                    }}
+                  />
                 )}
               </div>
             </div>

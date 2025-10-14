@@ -26,7 +26,7 @@ const CATEGORIAS = [
 
 export default function Cadastro() {
   const navigate = useNavigate();
-  const { cadastrar } = useApp();
+  const { cadastrar, loginComGoogle } = useApp();
   const [nome, setNome] = useState('');
   const [nomeEstabelecimento, setNomeEstabelecimento] = useState('');
   const [email, setEmail] = useState('');
@@ -116,8 +116,13 @@ export default function Cadastro() {
     }
   };
 
-  const handleSocialLogin = (provider: string) => {
-    toast.info(`Cadastro com ${provider} em breve!`);
+  const handleSocialLogin = async (provider: string) => {
+    if (provider !== 'Google') {
+      toast.info(`Cadastro com ${provider} em breve!`);
+      return;
+    }
+    const ok = await loginComGoogle();
+    if (!ok) toast.error('Não foi possível iniciar o cadastro com Google');
   };
 
   return (
