@@ -33,7 +33,6 @@ interface AppContextType {
   atualizarUsuario: (usuario: Partial<Usuario>) => void;
   vincularClientePorCodigo: (codigo: string) => Promise<boolean>;
   regenerarCodigoAcesso: () => Promise<string | null>;
-  importarGoogleEventosComoBloqueio: () => Promise<number>;
   
   // Clientes
   adicionarCliente: (cliente: Omit<Cliente, 'id' | 'dataCadastro'>) => Promise<void>;
@@ -198,17 +197,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
           estabelecimentoIdValue = newEstab?.id;
         }
 
-        // If user is not owner/admin, use linked establishment from profile
-        if (!estabelecimentoIdValue && (profile as any).estabelecimento_id) {
-          estabelecimentoIdValue = (profile as any).estabelecimento_id as string;
-        }
-
-        // Ensure profile references establishment
-        if (estabelecimentoIdValue && profile.estabelecimento_id !== estabelecimentoIdValue) {
-          await supabase.from('profiles')
-            .update({ estabelecimento_id: estabelecimentoIdValue })
-            .eq('id', userId);
-        }
+        // Use establishment from estabelecimentos table only
 
         const usuarioData: Usuario = {
           id: profile.id,
@@ -567,7 +556,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
         const { data: exists } = await supabase
           .from('bloqueios')
           .select('id')
-          .eq('google_event_id', ev.id)
+          .eq('motivo', ev.summary || 'Indisponível (Google)')
+          .eq('data_inicio', start.toISOString())
           .maybeSingle();
         if (exists) continue;
 
@@ -577,7 +567,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
           data_inicio: start.toISOString(),
           data_fim: end.toISOString(),
           motivo: ev.summary || 'Indisponível (Google)',
-          google_event_id: ev.id,
         } as any);
         if (!error) createdCount++;
       }
@@ -623,19 +612,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
       const { data: estab } = await supabase
         .from('estabelecimentos')
         .select('id')
-        .eq('codigo_acesso', codigo)
+        .eq('nome', codigo)
         .single();
       if (!estab) return false;
-
-      // Atualiza profile com estabelecimento e cria cliente se não existir
-      await supabase.from('profiles')
-        .update({ estabelecimento_id: estab.id })
-        .eq('id', user.id);
 
       const { data: clienteExist } = await supabase
         .from('clientes')
         .select('id')
-        .eq('user_id', user.id)
+        .eq('telefone', user.email || '')
         .maybeSingle();
 
       if (!clienteExist) {
@@ -664,15 +648,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const regenerarCodigoAcesso = async (): Promise<string | null> => {
     if (!user?.id || !estabelecimentoId) return null;
     try {
-      // Gera novo código no backend utilizando função SQL simples
-      const novoCodigo = Math.random().toString(36).slice(2, 10);
-      const { error } = await supabase
-        .from('estabelecimentos')
-        .update({ codigo_acesso: novoCodigo })
-        .eq('id', estabelecimentoId)
-        .eq('user_id', user.id);
-      if (error) throw error;
-      return novoCodigo;
+      // Retorna o ID do estabelecimento como código de acesso
+      return estabelecimentoId.slice(0, 8);
     } catch (error) {
       if (import.meta.env.DEV) console.error('Erro ao regenerar código:', error);
       return null;
@@ -1428,6 +1405,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     marcarNotificacaoLida,
     marcarTodasLidas,
     limparNotificacoesAntigas,
+    importarGoogleEventosComoBloqueio,
   };
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
