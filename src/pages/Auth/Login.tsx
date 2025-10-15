@@ -9,7 +9,7 @@ import { Mail, Lock, Chrome, Facebook, Instagram, Eye, EyeOff } from 'lucide-rea
 
 export default function Login() {
   const navigate = useNavigate();
-  const { login } = useApp();
+  const { login, loginComGoogle } = useApp();
   const [email, setEmail] = useState('');
   const [senha, setSenha] = useState('');
   const [loading, setLoading] = useState(false);
@@ -23,7 +23,7 @@ export default function Login() {
       const success = await login(email, senha);
       if (success) {
         toast.success('Login realizado com sucesso!');
-        navigate('/home');
+        navigate('/');
       } else {
         toast.error('Email ou senha incorretos');
       }
@@ -34,8 +34,13 @@ export default function Login() {
     }
   };
 
-  const handleSocialLogin = (provider: string) => {
-    toast.info(`Login com ${provider} em breve!`);
+  const handleSocialLogin = async (provider: string) => {
+    if (provider !== 'Google') {
+      toast.info(`Login com ${provider} em breve!`);
+      return;
+    }
+    const ok = await loginComGoogle();
+    if (!ok) toast.error('Não foi possível iniciar o login com Google');
   };
 
   return (

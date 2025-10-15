@@ -7,8 +7,10 @@ import { Button } from '@/components/ui/button';
 import { Settings } from 'lucide-react';
 import { useState } from 'react';
 import { toast } from 'sonner';
+import { useApp } from '@/context/AppContext';
 
 export default function Configuracoes() {
+  const { regenerarCodigoAcesso } = useApp();
   const [config, setConfig] = useState({
     mostrarNomeProfissional: true,
     mostrarFotoProfissional: true,
@@ -27,6 +29,18 @@ export default function Configuracoes() {
 
   const handleSalvar = () => {
     toast.success('Configurações salvas com sucesso!');
+  };
+
+  const [codigo, setCodigo] = useState<string>('********');
+  const handleRegerarCodigo = async () => {
+    const novo = await regenerarCodigoAcesso();
+    if (novo) {
+      setCodigo(novo);
+      try { await navigator.clipboard.writeText(novo); } catch {}
+      toast.success('Código regenerado e copiado');
+    } else {
+      toast.error('Não foi possível regenerar o código');
+    }
   };
 
   return (
@@ -196,6 +210,17 @@ export default function Configuracoes() {
                   <Input value={config.corPrimaria} readOnly />
                 </div>
               </div>
+            </div>
+          </Card>
+
+          {/* Código de acesso do estabelecimento */}
+          <Card className="p-6">
+            <h3 className="text-lg font-semibold mb-4">Código de acesso para clientes</h3>
+            <p className="text-sm text-muted-foreground mb-2">Compartilhe este código com seus clientes para que possam vincular e ver seus serviços.</p>
+            <div className="flex gap-2">
+              <Input readOnly value={codigo} />
+              <Button variant="outline" onClick={() => { try { navigator.clipboard.writeText(codigo); toast.success('Código copiado'); } catch {} }}>Copiar</Button>
+              <Button onClick={handleRegerarCodigo}>Regenerar</Button>
             </div>
           </Card>
 

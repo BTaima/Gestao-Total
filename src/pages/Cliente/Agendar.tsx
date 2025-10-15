@@ -8,7 +8,7 @@ import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 
 export default function Agendar() {
-  const { servicos, usuario, adicionarAgendamento } = useApp();
+  const { servicos, usuario, adicionarAgendamento, clientes } = useApp();
   const [passo, setPasso] = useState(1);
   const [servicoSelecionado, setServicoSelecionado] = useState('');
   const [dataSelecionada, setDataSelecionada] = useState<Date>();
@@ -27,13 +27,16 @@ export default function Agendar() {
 
     const servico = servicos.find(s => s.id === servicoSelecionado);
     if (!servico || !usuario) return;
+    // Mapear o clienteId real (tabela clientes) pelo user atual
+    const meuCliente = clientes.find(c => c.email === usuario.email || c.telefone === usuario.telefone);
+    const clienteId = meuCliente?.id || usuario.id; // fallback
 
     const [hora, minuto] = horaSelecionada.split(':').map(Number);
     const dataHora = new Date(dataSelecionada);
     dataHora.setHours(hora, minuto);
 
     adicionarAgendamento({
-      clienteId: usuario.id,
+      clienteId,
       servicoId: servicoSelecionado,
       dataHora,
       duracao: servico.duracao,

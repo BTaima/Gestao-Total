@@ -26,7 +26,7 @@ const getNavItemsByProfile = (isAdmin: boolean, isProfissional: boolean, isClien
   
   if (isCliente) {
     return [
-      { icon: Home, label: 'Início', path: '/home' },
+      { icon: Home, label: 'Início', path: '/cliente/home' },
       { icon: Calendar, label: 'Agendar', path: '/agendar' },
       { icon: ClipboardList, label: 'Agendamentos', path: '/meus-agendamentos' },
       { icon: User, label: 'Perfil', path: '/perfil' },

@@ -26,6 +26,7 @@ import Relatorios from "./pages/Admin/Relatorios";
 import Servicos from "./pages/Admin/Servicos";
 import Avaliacoes from "./pages/Profissional/Avaliacoes";
 import AvaliacoesAdmin from "./pages/Admin/AvaliacoesAdmin";
+import VincularCliente from "./pages/Cliente/Vincular";
 
 const queryClient = new QueryClient();
 
@@ -63,21 +64,49 @@ const AppRoutes = ({ onboardingVisto }: { onboardingVisto: boolean }) => {
             <Route path="*" element={<Navigate to="/onboarding-setup" replace />} />
           ) : (
             <>
-              <Route path="/" element={<Navigate to="/home" replace />} />
-              <Route path="/home" element={<Home />} />
-              <Route path="/agenda" element={<Agenda />} />
-              <Route path="/clientes" element={<Clientes />} />
-              <Route path="/financas" element={<Financas />} />
-              <Route path="/perfil" element={<Perfil />} />
-              <Route path="/selecao-perfil" element={<SelecaoPerfil />} />
-              <Route path="/profissionais" element={<Profissionais />} />
-              <Route path="/configuracoes" element={<Configuracoes />} />
-              <Route path="/relatorios" element={<Relatorios />} />
-              <Route path="/servicos" element={<Servicos />} />
-              <Route path="/avaliacoes" element={<Avaliacoes />} />
-              <Route path="/avaliacoes-admin" element={<AvaliacoesAdmin />} />
-              <Route path="/agendar" element={<Agendar />} />
-              <Route path="/meus-agendamentos" element={<MeusAgendamentos />} />
+              <Route path="/" element={<Navigate to={
+                usuario.tipo === 'administrador' ? '/home' :
+                usuario.tipo === 'profissional' ? '/agenda' :
+                '/cliente/home'
+              } replace />} />
+
+              {/* Rotas Admin */}
+              {usuario.tipo === 'administrador' && (
+                <>
+                  <Route path="/home" element={<Home />} />
+                  <Route path="/agenda" element={<Agenda />} />
+                  <Route path="/clientes" element={<Clientes />} />
+                  <Route path="/financas" element={<Financas />} />
+                  <Route path="/perfil" element={<Perfil />} />
+                  <Route path="/selecao-perfil" element={<SelecaoPerfil />} />
+                  <Route path="/profissionais" element={<Profissionais />} />
+                  <Route path="/configuracoes" element={<Configuracoes />} />
+                  <Route path="/relatorios" element={<Relatorios />} />
+                  <Route path="/servicos" element={<Servicos />} />
+                  <Route path="/avaliacoes-admin" element={<AvaliacoesAdmin />} />
+                </>
+              )}
+
+              {/* Rotas Profissional */}
+              {usuario.tipo === 'profissional' && (
+                <>
+                  <Route path="/agenda" element={<Agenda />} />
+                  <Route path="/perfil" element={<Perfil />} />
+                  <Route path="/avaliacoes" element={<Avaliacoes />} />
+                </>
+              )}
+
+              {/* Rotas Cliente */}
+              {usuario.tipo === 'cliente' && (
+                <>
+                  <Route path="/cliente/home" element={
+                    (usuario.estabelecimentoId ? <ClienteHome /> : <Navigate to="/cliente/vincular" replace />)
+                  } />
+                  <Route path="/agendar" element={<Agendar />} />
+                  <Route path="/meus-agendamentos" element={<MeusAgendamentos />} />
+                  <Route path="/cliente/vincular" element={<VincularCliente />} />
+                </>
+              )}
               <Route path="*" element={<NotFound />} />
             </>
           )}
