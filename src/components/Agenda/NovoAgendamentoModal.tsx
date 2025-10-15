@@ -5,7 +5,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { useEffect, useState } from 'react';
-import { Cliente, Servico, Agendamento } from '@/types';
+import { Cliente, Servico, Agendamento, Profissional } from '@/types';
 import { useApp } from '@/context/AppContext';
 import { toast } from '@/hooks/use-toast';
 
@@ -15,6 +15,8 @@ interface NovoAgendamentoModalProps {
   dataSelecionada: Date;
   clientes: Cliente[];
   servicos: Servico[];
+  profissionais?: Profissional[];
+  profissionalDefaultId?: string;
 }
 
 export function NovoAgendamentoModal({
@@ -22,11 +24,14 @@ export function NovoAgendamentoModal({
   onOpenChange,
   dataSelecionada,
   clientes,
-  servicos
+  servicos,
+  profissionais = [],
+  profissionalDefaultId
 }: NovoAgendamentoModalProps) {
   const { adicionarAgendamento, usuario } = useApp();
   const [clienteId, setClienteId] = useState('');
   const [servicoId, setServicoId] = useState('');
+  const [profissionalId, setProfissionalId] = useState<string>(profissionalDefaultId || (usuario?.id || ''));
   const [data, setData] = useState(dataSelecionada.toISOString().split('T')[0]);
   const [hora, setHora] = useState(() => {
     const h = new Date(dataSelecionada).getHours().toString().padStart(2, '0');
@@ -57,7 +62,7 @@ export function NovoAgendamentoModal({
     const novoAgendamento: Omit<Agendamento, 'id' | 'dataCriacao' | 'dataAtualizacao'> = {
       clienteId,
       servicoId,
-      profissionalId: usuario?.id,
+      profissionalId: profissionalId || usuario?.id,
       dataHora,
       duracao: servico.duracao,
       status: 'agendado',
@@ -79,6 +84,7 @@ export function NovoAgendamentoModal({
     setClienteId('');
     setServicoId('');
     setObservacoes('');
+    setProfissionalId(profissionalDefaultId || (usuario?.id || ''));
     onOpenChange(false);
   };
 
@@ -98,6 +104,21 @@ export function NovoAgendamentoModal({
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
+          {profissionais.length > 0 && (
+            <div>
+              <Label htmlFor="profissional">Profissional</Label>
+              <Select value={profissionalId} onValueChange={setProfissionalId}>
+                <SelectTrigger id="profissional">
+                  <SelectValue placeholder="Selecione o profissional" />
+                </SelectTrigger>
+                <SelectContent>
+                  {profissionais.map((p) => (
+                    <SelectItem key={p.id} value={p.id}>{p.nome}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
           <div>
             <Label htmlFor="cliente">Cliente *</Label>
             <Select value={clienteId} onValueChange={setClienteId}>

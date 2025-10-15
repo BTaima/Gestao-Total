@@ -12,15 +12,18 @@ import { MenuLateral } from '@/components/Agenda/MenuLateral';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { Agendamento } from '@/types';
+import { Profissional } from '@/types';
+import { AgendamentoDetalhesModal } from '@/components/Agenda/AgendamentoDetalhesModal';
 
 export default function Agenda() {
-  const { usuario, clientes, servicos, agendamentos, bloqueios } = useApp();
+  const { usuario, clientes, servicos, agendamentos, bloqueios, profissionais } = useApp() as any;
   const [dataSelecionada, setDataSelecionada] = useState(new Date());
-  const [profissionalSelecionado, setProfissionalSelecionado] = useState(usuario?.id || 'todos');
+  const [profissionalSelecionado, setProfissionalSelecionado] = useState<string>('todos');
   const [modalNovoAgendamento, setModalNovoAgendamento] = useState(false);
   const [modalListaEspera, setModalListaEspera] = useState(false);
   const [modalBloqueio, setModalBloqueio] = useState(false);
   const [menuLateralAberto, setMenuLateralAberto] = useState(false);
+  const [agendamentoSelecionado, setAgendamentoSelecionado] = useState<Agendamento | null>(null);
 
   // Filter agendamentos for selected date and professional
   const agendamentosFiltrados = agendamentos.filter(ag => {
@@ -30,7 +33,9 @@ export default function Agenda() {
     agData.setHours(0, 0, 0, 0);
     dataSel.setHours(0, 0, 0, 0);
     
-    return agData.getTime() === dataSel.getTime();
+    const mesmaData = agData.getTime() === dataSel.getTime();
+    const mesmoProf = profissionalSelecionado === 'todos' || ag.profissionalId === profissionalSelecionado;
+    return mesmaData && mesmoProf;
   });
 
   const bloqueiosFiltrados = bloqueios.filter(bl => {
@@ -42,7 +47,9 @@ export default function Agenda() {
     blInicio.setHours(0, 0, 0, 0);
     blFim.setHours(0, 0, 0, 0);
     
-    return dataSel >= blInicio && dataSel <= blFim;
+    const noDia = dataSel >= blInicio && dataSel <= blFim;
+    const mesmoProf = profissionalSelecionado === 'todos' || bl.profissionalId === profissionalSelecionado;
+    return noDia && mesmoProf;
   });
 
   const handleIrParaHoje = () => {
@@ -56,8 +63,7 @@ export default function Agenda() {
       setDataSelecionada(new Date(agendamento.dataHora));
       return;
     }
-    // Future: open edit details modal
-    console.log('Agendamento clicado:', agendamento);
+    setAgendamentoSelecionado(agendamento);
   };
 
   const dataFormatada = dataSelecionada.toLocaleDateString('pt-BR', {
@@ -91,7 +97,9 @@ export default function Agenda() {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="todos">Todos os profissionais</SelectItem>
-            <SelectItem value={usuario?.id || ''}>{usuario?.nome || 'Você'}</SelectItem>
+            {profissionais?.map((p: Profissional) => (
+              <SelectItem key={p.id} value={p.id}>{p.nome}</SelectItem>
+            ))}
           </SelectContent>
         </Select>
       </div>
@@ -131,6 +139,8 @@ export default function Agenda() {
         dataSelecionada={dataSelecionada}
         clientes={clientes}
         servicos={servicos}
+        profissionais={profissionais || []}
+        profissionalDefaultId={profissionalSelecionado !== 'todos' ? profissionalSelecionado : (usuario?.id || '')}
       />
 
       <ListaEsperaModal
@@ -153,6 +163,16 @@ export default function Agenda() {
       />
 
       <BottomNav />
+
+      {agendamentoSelecionado && (
+        <AgendamentoDetalhesModal
+          open={!!agendamentoSelecionado}
+          onOpenChange={(o) => !o && setAgendamentoSelecionado(null)}
+          agendamento={agendamentoSelecionado}
+          clientes={clientes}
+          servicos={servicos}
+        />
+      )}
     </div>
   );
 }
