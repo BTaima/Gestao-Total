@@ -512,7 +512,7 @@ export type Database = {
           id: string
           nome_completo: string
           nome_estabelecimento: string | null
-          telefone: string
+          telefone: string | null
           updated_at: string | null
         }
         Insert: {
@@ -523,7 +523,7 @@ export type Database = {
           id: string
           nome_completo: string
           nome_estabelecimento?: string | null
-          telefone: string
+          telefone?: string | null
           updated_at?: string | null
         }
         Update: {
@@ -534,7 +534,7 @@ export type Database = {
           id?: string
           nome_completo?: string
           nome_estabelecimento?: string | null
-          telefone?: string
+          telefone?: string | null
           updated_at?: string | null
         }
         Relationships: []

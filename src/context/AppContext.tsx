@@ -29,6 +29,12 @@ interface AppContextType {
     categoria: string;
     tipo: 'administrador' | 'profissional' | 'cliente';
   }) => Promise<boolean>;
+  completarCadastroGoogle: (dados: {
+    telefone: string;
+    nomeEstabelecimento: string;
+    categoria: string;
+    tipo: 'administrador' | 'profissional' | 'cliente';
+  }) => Promise<boolean>;
   logout: () => void;
   atualizarUsuario: (usuario: Partial<Usuario>) => void;
   vincularClientePorCodigo: (codigo: string) => Promise<boolean>;
@@ -165,13 +171,22 @@ export function AppProvider({ children }: { children: ReactNode }) {
         .from('profiles')
         .select('*')
         .eq('id', userId)
-        .single();
+        .maybeSingle();
 
       const { data: userRole } = await supabase
         .from('user_roles')
         .select('role')
         .eq('user_id', userId)
-        .single();
+        .maybeSingle();
+
+      // Se não tem perfil completo (login via Google sem completar cadastro)
+      if (!profile || !profile.telefone || !profile.categoria || !userRole) {
+        // Redirecionar para pré-cadastro
+        if (window.location.pathname !== '/pre-cadastro-google') {
+          window.location.href = '/pre-cadastro-google';
+        }
+        return;
+      }
 
       if (profile && userRole) {
         // Load or create estabelecimento
@@ -478,6 +493,49 @@ export function AppProvider({ children }: { children: ReactNode }) {
     } catch (error) {
       if (import.meta.env.DEV) {
         console.error('Erro no cadastro:', error);
+      }
+      return false;
+    }
+  };
+
+  const completarCadastroGoogle = async (dados: {
+    telefone: string;
+    nomeEstabelecimento: string;
+    categoria: string;
+    tipo: 'administrador' | 'profissional' | 'cliente';
+  }): Promise<boolean> => {
+    if (!user?.id) return false;
+    
+    try {
+      // Update profile with additional data
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .update({
+          telefone: dados.telefone,
+          nome_estabelecimento: dados.nomeEstabelecimento,
+          categoria: dados.categoria,
+        })
+        .eq('id', user.id);
+
+      if (profileError) throw profileError;
+
+      // Update or create user role
+      const { error: roleError } = await supabase
+        .from('user_roles')
+        .upsert({
+          user_id: user.id,
+          role: dados.tipo,
+        });
+
+      if (roleError) throw roleError;
+
+      // Reload user profile
+      await loadUserProfile(user.id);
+      
+      return true;
+    } catch (error) {
+      if (import.meta.env.DEV) {
+        console.error('Erro ao completar cadastro Google:', error);
       }
       return false;
     }
@@ -1371,6 +1429,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     notificacoes,
     login,
     cadastrar,
+    completarCadastroGoogle,
     logout,
     atualizarUsuario,
     loginComGoogle,

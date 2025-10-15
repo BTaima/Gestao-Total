@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
-import { User, Mail, Lock, Phone, Building2, Briefcase, ArrowLeft, Eye, EyeOff, Chrome, Facebook, Instagram } from 'lucide-react';
+import { User, Mail, Lock, Phone, Building2, Briefcase, ArrowLeft, Eye, EyeOff, Chrome } from 'lucide-react';
 
 const CATEGORIAS = [
   'Cabeleireiro(a)',
@@ -336,30 +336,15 @@ export default function Cadastro() {
               </div>
             </div>
 
-            <div className="mt-6 grid grid-cols-3 gap-3">
+            <div className="mt-6 flex justify-center">
               <Button
                 type="button"
                 variant="outline"
                 onClick={() => handleSocialLogin('Google')}
-                className="h-12"
+                className="h-12 w-full max-w-xs"
               >
-                <Chrome className="w-5 h-5" />
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => handleSocialLogin('Facebook')}
-                className="h-12"
-              >
-                <Facebook className="w-5 h-5" />
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => handleSocialLogin('Instagram')}
-                className="h-12"
-              >
-                <Instagram className="w-5 h-5" />
+                <Chrome className="w-5 h-5 mr-2" />
+                Continuar com Google
               </Button>
             </div>
           </div>

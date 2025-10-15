@@ -27,6 +27,7 @@ import Servicos from "./pages/Admin/Servicos";
 import Avaliacoes from "./pages/Profissional/Avaliacoes";
 import AvaliacoesAdmin from "./pages/Admin/AvaliacoesAdmin";
 import VincularCliente from "./pages/Cliente/Vincular";
+import PreCadastroGoogle from "./pages/Auth/PreCadastroGoogle";
 
 const queryClient = new QueryClient();
 
@@ -57,6 +58,7 @@ const AppRoutes = ({ onboardingVisto }: { onboardingVisto: boolean }) => {
       <Route path="/login" element={<Login />} />
       <Route path="/cadastro" element={<Cadastro />} />
       <Route path="/onboarding-setup" element={<OnboardingSetup />} />
+      <Route path="/pre-cadastro-google" element={<PreCadastroGoogle />} />
       
       {usuario ? (
         <>

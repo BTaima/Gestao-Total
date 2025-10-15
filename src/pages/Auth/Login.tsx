@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
-import { Mail, Lock, Chrome, Facebook, Instagram, Eye, EyeOff } from 'lucide-react';
+import { Mail, Lock, Chrome, Eye, EyeOff } from 'lucide-react';
 
 export default function Login() {
   const navigate = useNavigate();
@@ -121,30 +121,15 @@ export default function Login() {
               </div>
             </div>
 
-            <div className="mt-6 grid grid-cols-3 gap-3">
+            <div className="mt-6 flex justify-center">
               <Button
                 type="button"
                 variant="outline"
                 onClick={() => handleSocialLogin('Google')}
-                className="h-12"
+                className="h-12 w-full max-w-xs"
               >
-                <Chrome className="w-5 h-5" />
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => handleSocialLogin('Facebook')}
-                className="h-12"
-              >
-                <Facebook className="w-5 h-5" />
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => handleSocialLogin('Instagram')}
-                className="h-12"
-              >
-                <Instagram className="w-5 h-5" />
+                <Chrome className="w-5 h-5 mr-2" />
+                Continuar com Google
               </Button>
             </div>
           </div>
