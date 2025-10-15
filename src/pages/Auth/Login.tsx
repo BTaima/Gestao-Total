@@ -23,7 +23,7 @@ export default function Login() {
       const success = await login(email, senha);
       if (success) {
         toast.success('Login realizado com sucesso!');
-        navigate('/home');
+        navigate('/');
       } else {
         toast.error('Email ou senha incorretos');
       }

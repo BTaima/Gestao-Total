@@ -4,7 +4,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Cliente, Servico, Agendamento } from '@/types';
 import { useApp } from '@/context/AppContext';
 import { toast } from '@/hooks/use-toast';
@@ -28,7 +28,11 @@ export function NovoAgendamentoModal({
   const [clienteId, setClienteId] = useState('');
   const [servicoId, setServicoId] = useState('');
   const [data, setData] = useState(dataSelecionada.toISOString().split('T')[0]);
-  const [hora, setHora] = useState('09:00');
+  const [hora, setHora] = useState(() => {
+    const h = new Date(dataSelecionada).getHours().toString().padStart(2, '0');
+    const m = new Date(dataSelecionada).getMinutes().toString().padStart(2, '0');
+    return `${h}:${m}`;
+  });
   const [observacoes, setObservacoes] = useState('');
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -77,6 +81,14 @@ export function NovoAgendamentoModal({
     setObservacoes('');
     onOpenChange(false);
   };
+
+  // Sincroniza quando dataSelecionada mudar (ex: clique na grade)
+  useEffect(() => {
+    setData(dataSelecionada.toISOString().split('T')[0]);
+    const h = dataSelecionada.getHours().toString().padStart(2, '0');
+    const m = dataSelecionada.getMinutes().toString().padStart(2, '0');
+    setHora(`${h}:${m}`);
+  }, [dataSelecionada]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

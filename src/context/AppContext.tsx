@@ -216,7 +216,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
           email: user?.email || '',
           telefone: profile.telefone,
           tipo: userRole.role as any,
-          estabelecimentoId: estabelecimentoIdValue || profile.id,
+          estabelecimentoId: estabelecimentoIdValue || null as any,
           estabelecimentoNome: profile.nome_estabelecimento || '',
           ativo: profile.ativo,
           dataCadastro: new Date(profile.data_cadastro),

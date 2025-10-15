@@ -97,13 +97,13 @@ export default function Cadastro() {
         // Redireciona para a página apropriada baseado no tipo de conta
         switch (tipoConta) {
           case 'administrador':
-            navigate('/admin/dashboard');
+            navigate('/');
             break;
           case 'profissional':
-            navigate('/profissional/dashboard');
+            navigate('/');
             break;
           case 'cliente':
-            navigate('/cliente/home');
+            navigate('/');
             break;
         }
       } else {

@@ -10,12 +10,16 @@ import { generateId } from '@/utils/storage';
 import { toast } from 'sonner';
 
 export default function MeusAgendamentos() {
-  const { agendamentos, servicos, usuario, avaliacoes, adicionarAvaliacao, atualizarAgendamento } = useApp();
+  const { agendamentos, servicos, usuario, clientes, avaliacoes, adicionarAvaliacao, atualizarAgendamento } = useApp();
   const [avaliacaoAberta, setAvaliacaoAberta] = useState(false);
   const [agendamentoSelecionado, setAgendamentoSelecionado] = useState<any>(null);
   const [tabAtiva, setTabAtiva] = useState('proximos');
 
-  const meusAgendamentos = agendamentos.filter(a => a.clienteId === usuario?.id);
+  const meuClienteId = (() => {
+    const c = clientes.find(x => x.email === usuario?.email || x.telefone === usuario?.telefone);
+    return c?.id || usuario?.id;
+  })();
+  const meusAgendamentos = agendamentos.filter(a => a.clienteId === meuClienteId);
 
   const proximos = meusAgendamentos.filter(a => 
     new Date(a.dataHora) >= new Date() && 

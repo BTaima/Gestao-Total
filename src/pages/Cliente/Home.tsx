@@ -5,14 +5,18 @@ import { Calendar, Clock, DollarSign, Plus } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 export default function ClienteHome() {
-  const { servicos, agendamentos, usuario } = useApp();
+  const { servicos, agendamentos, usuario, clientes } = useApp();
   const navigate = useNavigate();
 
   const servicosAtivos = servicos.filter(s => s.ativo);
 
+  const meuClienteId = (() => {
+    const c = clientes.find(x => x.email === usuario?.email || x.telefone === usuario?.telefone);
+    return c?.id || usuario?.id;
+  })();
   const proximosAgendamentos = agendamentos
     .filter(a => 
-      a.clienteId === usuario?.id && 
+      a.clienteId === meuClienteId && 
       new Date(a.dataHora) >= new Date() && 
       a.status !== 'cancelado'
     )

@@ -99,7 +99,9 @@ const AppRoutes = ({ onboardingVisto }: { onboardingVisto: boolean }) => {
               {/* Rotas Cliente */}
               {usuario.tipo === 'cliente' && (
                 <>
-                  <Route path="/cliente/home" element={<ClienteHome />} />
+                  <Route path="/cliente/home" element={
+                    (usuario.estabelecimentoId ? <ClienteHome /> : <Navigate to="/cliente/vincular" replace />)
+                  } />
                   <Route path="/agendar" element={<Agendar />} />
                   <Route path="/meus-agendamentos" element={<MeusAgendamentos />} />
                   <Route path="/cliente/vincular" element={<VincularCliente />} />
