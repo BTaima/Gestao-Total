@@ -81,9 +81,9 @@ export default function Cadastro() {
     setLoading(true);
 
     try {
-      const success = await cadastrar({
+      const result = await cadastrar({
         nome,
-        email,
+        email: email.trim().toLowerCase(),
         senha,
         telefone,
         nomeEstabelecimento,
@@ -91,8 +91,12 @@ export default function Cadastro() {
         tipo: tipoConta
       });
 
-      if (success) {
-        toast.success('Cadastro realizado com sucesso!');
+      if (result.ok) {
+        if (result.needsConfirmation) {
+          toast.success('Cadastro realizado! Confirme seu email para entrar.');
+        } else {
+          toast.success('Cadastro realizado com sucesso!');
+        }
         
         // Redireciona para a página apropriada baseado no tipo de conta
         switch (tipoConta) {
@@ -107,7 +111,11 @@ export default function Cadastro() {
             break;
         }
       } else {
-        toast.error('Este email já está cadastrado');
+        if (result.alreadyExists) {
+          toast.error('Este email já está cadastrado. Tente entrar.');
+        } else {
+          toast.error(result.message || 'Erro ao criar conta');
+        }
       }
     } catch (error) {
       toast.error('Erro ao criar conta');

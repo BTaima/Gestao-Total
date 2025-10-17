@@ -9,7 +9,7 @@ import { Mail, Lock, Chrome, Eye, EyeOff } from 'lucide-react';
 
 export default function Login() {
   const navigate = useNavigate();
-  const { login, loginComGoogle } = useApp();
+  const { login, loginComGoogle, resendConfirmEmail } = useApp();
   const [email, setEmail] = useState('');
   const [senha, setSenha] = useState('');
   const [loading, setLoading] = useState(false);
@@ -20,18 +20,30 @@ export default function Login() {
     setLoading(true);
 
     try {
-      const success = await login(email, senha);
-      if (success) {
+      const result = await login(email.trim().toLowerCase(), senha);
+      if (result.ok) {
         toast.success('Login realizado com sucesso!');
         navigate('/');
       } else {
-        toast.error('Email ou senha incorretos');
+        if (result.reason === 'email_not_confirmed') {
+          toast.error('Verifique seu email e confirme sua conta.');
+        } else if (result.reason === 'invalid_credentials') {
+          toast.error('Email ou senha incorretos');
+        } else {
+          toast.error('Não foi possível entrar. Tente novamente.');
+        }
       }
     } catch (error) {
       toast.error('Erro ao fazer login');
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleResend = async () => {
+    const ok = await resendConfirmEmail(email);
+    if (ok) toast.success('Email de confirmação reenviado.');
+    else toast.error('Não foi possível reenviar confirmação.');
   };
 
   const handleSocialLogin = async (provider: string) => {
@@ -109,6 +121,15 @@ export default function Login() {
             >
               {loading ? 'Entrando...' : 'Entrar'}
             </Button>
+            <div className="text-center text-xs text-muted-foreground mt-2">
+              <button
+                type="button"
+                onClick={handleResend}
+                className="underline hover:text-foreground"
+              >
+                Reenviar email de confirmação
+              </button>
+            </div>
           </form>
 
           <div className="mt-6">
