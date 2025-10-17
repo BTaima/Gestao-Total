@@ -3,6 +3,20 @@ import { Usuario, Cliente, Agendamento, Servico, Transacao, Lembrete, Configurac
 import { supabase } from '@/integrations/supabase/client';
 import { User, Session } from '@supabase/supabase-js';
 
+// Auth results for better UX messaging on errors
+type LoginResult = {
+  ok: boolean;
+  reason?: 'invalid_credentials' | 'email_not_confirmed' | 'unknown';
+  message?: string;
+};
+
+type SignupResult = {
+  ok: boolean;
+  needsConfirmation?: boolean;
+  alreadyExists?: boolean;
+  message?: string;
+};
+
 interface AppContextType {
   usuario: Usuario | null;
   estabelecimentos: Estabelecimento[];
@@ -18,7 +32,7 @@ interface AppContextType {
   notificacoes: Notificacao[];
   
   // Auth
-  login: (email: string, senha: string) => Promise<boolean>;
+  login: (email: string, senha: string) => Promise<LoginResult>;
   loginComGoogle: () => Promise<boolean>;
   cadastrar: (dados: {
     nome: string;
@@ -28,7 +42,8 @@ interface AppContextType {
     nomeEstabelecimento: string;
     categoria: string;
     tipo: 'administrador' | 'profissional' | 'cliente';
-  }) => Promise<boolean>;
+  }) => Promise<SignupResult>;
+  resendConfirmEmail: (email: string) => Promise<boolean>;
   completarCadastroGoogle: (dados: {
     telefone: string;
     nomeEstabelecimento: string;
@@ -423,20 +438,30 @@ export function AppProvider({ children }: { children: ReactNode }) {
   };
 
   // Auth functions
-  const login = async (email: string, senha: string): Promise<boolean> => {
+  const login = async (email: string, senha: string): Promise<LoginResult> => {
+    const normalizedEmail = email.trim().toLowerCase();
     try {
       const { data, error } = await supabase.auth.signInWithPassword({
-        email,
+        email: normalizedEmail,
         password: senha,
       });
 
-      if (error) throw error;
-      return !!data.user;
+      if (error) {
+        const message = (error as any)?.message || 'Erro ao fazer login';
+        if (message.toLowerCase().includes('email not confirmed')) {
+          return { ok: false, reason: 'email_not_confirmed', message };
+        }
+        if (message.toLowerCase().includes('invalid login credentials')) {
+          return { ok: false, reason: 'invalid_credentials', message };
+        }
+        return { ok: false, reason: 'unknown', message };
+      }
+      return { ok: !!data.user };
     } catch (error) {
       if (import.meta.env.DEV) {
         console.error('Erro no login:', error);
       }
-      return false;
+      return { ok: false, reason: 'unknown', message: 'Erro ao fazer login' };
     }
   };
 
@@ -469,12 +494,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
     nomeEstabelecimento: string;
     categoria: string;
     tipo: 'administrador' | 'profissional' | 'cliente';
-  }): Promise<boolean> => {
+  }): Promise<SignupResult> => {
     try {
       const redirectUrl = `${window.location.origin}/`;
-      
+      const normalizedEmail = dados.email.trim().toLowerCase();
+
       const { data, error } = await supabase.auth.signUp({
-        email: dados.email,
+        email: normalizedEmail,
         password: dados.senha,
         options: {
           emailRedirectTo: redirectUrl,
@@ -488,11 +514,34 @@ export function AppProvider({ children }: { children: ReactNode }) {
         },
       });
 
-      if (error) throw error;
-      return !!data.user;
+      if (error) {
+        const message = (error as any)?.message || '';
+        const lower = message.toLowerCase();
+        if (lower.includes('already registered') || lower.includes('already exists') || lower.includes('duplicate')) {
+          return { ok: false, alreadyExists: true, message };
+        }
+        return { ok: false, message };
+      }
+
+      const needsConfirmation = !data.session;
+      return { ok: !!data.user, needsConfirmation };
     } catch (error) {
       if (import.meta.env.DEV) {
         console.error('Erro no cadastro:', error);
+      }
+      return { ok: false, message: 'Erro ao criar conta' };
+    }
+  };
+
+  const resendConfirmEmail = async (email: string): Promise<boolean> => {
+    try {
+      const normalizedEmail = email.trim().toLowerCase();
+      const { error } = await supabase.auth.resend({ type: 'signup', email: normalizedEmail });
+      if (error) throw error;
+      return true;
+    } catch (error) {
+      if (import.meta.env.DEV) {
+        console.error('Erro ao reenviar confirmação:', error);
       }
       return false;
     }
@@ -1433,6 +1482,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     logout,
     atualizarUsuario,
     loginComGoogle,
+    resendConfirmEmail,
     vincularClientePorCodigo,
     regenerarCodigoAcesso,
     adicionarCliente,
