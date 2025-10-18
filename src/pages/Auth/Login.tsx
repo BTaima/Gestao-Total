@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useApp } from '@/context/AppContext';
+import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -20,10 +21,27 @@ export default function Login() {
     setLoading(true);
 
     try {
-      const success = await login(email, senha);
-      if (success) {
+      const result = await login(email, senha);
+      if (result === true) {
         toast.success('Login realizado com sucesso!');
         navigate('/');
+      } else if (result === 'email_not_confirmed') {
+        toast.error('Email não confirmado. Verifique sua caixa de entrada.', {
+          action: {
+            label: 'Reenviar',
+            onClick: async () => {
+              const { error } = await supabase.auth.resend({
+                type: 'signup',
+                email: email,
+              });
+              if (!error) {
+                toast.success('Email de confirmação reenviado!');
+              } else {
+                toast.error('Erro ao reenviar email');
+              }
+            },
+          },
+        });
       } else {
         toast.error('Email ou senha incorretos');
       }

@@ -39,7 +39,6 @@ export default function SelecaoPerfil() {
       telefone: formData.telefone,
       nomeEstabelecimento: formData.nomeEstabelecimento,
       categoria: 'Outro',
-      tipo: perfilSelecionado === 'admin' ? 'administrador' : perfilSelecionado === 'profissional' ? 'profissional' : 'cliente'
     });
     
     if (sucesso) {

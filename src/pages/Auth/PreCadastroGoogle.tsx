@@ -29,7 +29,6 @@ export default function PreCadastroGoogle() {
   const [telefone, setTelefone] = useState('');
   const [nomeEstabelecimento, setNomeEstabelecimento] = useState('');
   const [categoria, setCategoria] = useState('');
-  const [tipoConta, setTipoConta] = useState<'administrador' | 'profissional' | 'cliente'>('administrador');
   const [loading, setLoading] = useState(false);
 
   const formatTelefone = (value: string) => {
@@ -59,7 +58,6 @@ export default function PreCadastroGoogle() {
         telefone,
         nomeEstabelecimento,
         categoria,
-        tipo: tipoConta
       });
 
       if (success) {
@@ -144,26 +142,6 @@ export default function PreCadastroGoogle() {
                   </SelectContent>
                 </Select>
               </div>
-            </div>
-
-            {/* Tipo de Conta */}
-            <div className="space-y-2">
-              <Label htmlFor="tipoConta">Tipo de conta</Label>
-              <Select value={tipoConta} onValueChange={(value: any) => setTipoConta(value)} required>
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione o tipo de conta" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="administrador">Administrador</SelectItem>
-                  <SelectItem value="profissional">Profissional</SelectItem>
-                  <SelectItem value="cliente">Cliente</SelectItem>
-                </SelectContent>
-              </Select>
-              <p className="text-xs text-muted-foreground">
-                {tipoConta === 'administrador' && 'Acesso completo ao sistema, gerenciar profissionais e clientes'}
-                {tipoConta === 'profissional' && 'Gerenciar sua agenda e atendimentos'}
-                {tipoConta === 'cliente' && 'Agendar serviços e acompanhar seus agendamentos'}
-              </p>
             </div>
 
             <Button

@@ -18,7 +18,7 @@ interface AppContextType {
   notificacoes: Notificacao[];
   
   // Auth
-  login: (email: string, senha: string) => Promise<boolean>;
+  login: (email: string, senha: string) => Promise<boolean | 'email_not_confirmed'>;
   loginComGoogle: () => Promise<boolean>;
   cadastrar: (dados: {
     nome: string;
@@ -27,13 +27,11 @@ interface AppContextType {
     telefone: string;
     nomeEstabelecimento: string;
     categoria: string;
-    tipo: 'administrador' | 'profissional' | 'cliente';
   }) => Promise<boolean>;
   completarCadastroGoogle: (dados: {
     telefone: string;
     nomeEstabelecimento: string;
     categoria: string;
-    tipo: 'administrador' | 'profissional' | 'cliente';
   }) => Promise<boolean>;
   logout: () => void;
   atualizarUsuario: (usuario: Partial<Usuario>) => void;
@@ -423,14 +421,20 @@ export function AppProvider({ children }: { children: ReactNode }) {
   };
 
   // Auth functions
-  const login = async (email: string, senha: string): Promise<boolean> => {
+  const login = async (email: string, senha: string): Promise<boolean | 'email_not_confirmed'> => {
     try {
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password: senha,
       });
 
-      if (error) throw error;
+      if (error) {
+        // Verificar se o erro é de email não confirmado
+        if (error.message.includes('Email not confirmed') || error.message.includes('email_not_confirmed')) {
+          return 'email_not_confirmed';
+        }
+        throw error;
+      }
       return !!data.user;
     } catch (error) {
       if (import.meta.env.DEV) {
@@ -468,7 +472,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
     telefone: string;
     nomeEstabelecimento: string;
     categoria: string;
-    tipo: 'administrador' | 'profissional' | 'cliente';
   }): Promise<boolean> => {
     try {
       const redirectUrl = `${window.location.origin}/`;
@@ -483,7 +486,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
             telefone: dados.telefone,
             nome_estabelecimento: dados.nomeEstabelecimento,
             categoria: dados.categoria,
-            tipo: dados.tipo,
           },
         },
       });
@@ -502,7 +504,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
     telefone: string;
     nomeEstabelecimento: string;
     categoria: string;
-    tipo: 'administrador' | 'profissional' | 'cliente';
   }): Promise<boolean> => {
     if (!user?.id) return false;
     
@@ -519,15 +520,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
       if (profileError) throw profileError;
 
-      // Update or create user role
-      const { error: roleError } = await supabase
-        .from('user_roles')
-        .upsert({
-          user_id: user.id,
-          role: dados.tipo,
-        });
-
-      if (roleError) throw roleError;
+      // Role já foi criada automaticamente pelo trigger como 'cliente'
+      // Não permitimos que o usuário escolha seu papel por segurança
 
       // Reload user profile
       await loadUserProfile(user.id);

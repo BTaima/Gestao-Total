@@ -32,7 +32,6 @@ export default function Cadastro() {
   const [email, setEmail] = useState('');
   const [telefone, setTelefone] = useState('');
   const [categoria, setCategoria] = useState('');
-  const [tipoConta, setTipoConta] = useState<'administrador' | 'profissional' | 'cliente'>('administrador');
   const [senha, setSenha] = useState('');
   const [confirmSenha, setConfirmSenha] = useState('');
   const [loading, setLoading] = useState(false);
@@ -88,24 +87,11 @@ export default function Cadastro() {
         telefone,
         nomeEstabelecimento,
         categoria,
-        tipo: tipoConta
       });
 
       if (success) {
-        toast.success('Cadastro realizado com sucesso!');
-        
-        // Redireciona para a página apropriada baseado no tipo de conta
-        switch (tipoConta) {
-          case 'administrador':
-            navigate('/');
-            break;
-          case 'profissional':
-            navigate('/');
-            break;
-          case 'cliente':
-            navigate('/');
-            break;
-        }
+        toast.success('Cadastro realizado! Verifique seu email para confirmar sua conta.');
+        navigate('/login');
       } else {
         toast.error('Este email já está cadastrado');
       }
@@ -236,26 +222,6 @@ export default function Cadastro() {
                   </SelectContent>
                 </Select>
               </div>
-            </div>
-
-            {/* Tipo de Conta */}
-            <div className="space-y-2">
-              <Label htmlFor="tipoConta">Tipo de conta</Label>
-              <Select value={tipoConta} onValueChange={(value: any) => setTipoConta(value)} required>
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione o tipo de conta" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="administrador">Administrador</SelectItem>
-                  <SelectItem value="profissional">Profissional</SelectItem>
-                  <SelectItem value="cliente">Cliente</SelectItem>
-                </SelectContent>
-              </Select>
-              <p className="text-xs text-muted-foreground">
-                {tipoConta === 'administrador' && 'Acesso completo ao sistema, gerenciar profissionais e clientes'}
-                {tipoConta === 'profissional' && 'Gerenciar sua agenda e atendimentos'}
-                {tipoConta === 'cliente' && 'Agendar serviços e acompanhar seus agendamentos'}
-              </p>
             </div>
 
             {/* Senha */}
