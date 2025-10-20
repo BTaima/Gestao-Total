@@ -22,6 +22,8 @@ import ClienteHome from "./pages/Cliente/Home";
 import MeusAgendamentos from "./pages/Cliente/MeusAgendamentos";
 import Agendar from "./pages/Cliente/Agendar";
 import SelecaoPerfil from "./pages/Auth/SelecaoPerfil";
+import OnboardingProfissional from "./pages/Auth/OnboardingProfissional";
+import OnboardingCliente from "./pages/Auth/OnboardingCliente";
 import Relatorios from "./pages/Admin/Relatorios";
 import Servicos from "./pages/Admin/Servicos";
 import Avaliacoes from "./pages/Profissional/Avaliacoes";
@@ -59,10 +61,13 @@ const AppRoutes = ({ onboardingVisto }: { onboardingVisto: boolean }) => {
       <Route path="/cadastro" element={<Cadastro />} />
       <Route path="/onboarding-setup" element={<OnboardingSetup />} />
       <Route path="/pre-cadastro-google" element={<PreCadastroGoogle />} />
+      <Route path="/selecao-perfil" element={<SelecaoPerfil />} />
+      <Route path="/onboarding-profissional" element={<OnboardingProfissional />} />
+      <Route path="/onboarding-cliente" element={<OnboardingCliente />} />
       
       {usuario ? (
         <>
-          {!usuario.setupCompleto ? (
+          {!usuario.setupCompleto && usuario.tipo === 'administrador' ? (
             <Route path="*" element={<Navigate to="/onboarding-setup" replace />} />
           ) : (
             <>

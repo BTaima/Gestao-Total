@@ -37,6 +37,7 @@ interface AppContextType {
   atualizarUsuario: (usuario: Partial<Usuario>) => void;
   criarEstabelecimento: (nomeEstabelecimento: string, telefone: string, categoria: string) => Promise<{ estabelecimentoId: string; codigoAcesso: string } | null>;
   vincularClientePorCodigo: (codigo: string) => Promise<boolean>;
+  vincularProfissionalPorCodigo: (codigo: string, nome?: string, telefone?: string) => Promise<boolean>;
   regenerarCodigoAcesso: () => Promise<string | null>;
   
   // Clientes
@@ -188,30 +189,34 @@ export function AppProvider({ children }: { children: ReactNode }) {
       }
 
       if (profile && userRole) {
-        // Load or create estabelecimento
-        const { data: estab } = await supabase
-          .from('estabelecimentos')
-          .select('*')
-          .eq('user_id', userId)
-          .maybeSingle();
+        let estabelecimentoIdValue: string | null | undefined = null;
 
-        let estabelecimentoIdValue = estab?.id;
-
-        if (!estab && userRole.role === 'administrador') {
-          // Create estabelecimento for admin
-          const { data: newEstab } = await supabase
+        if (userRole.role === 'administrador') {
+          // Load or create estabelecimento para admin
+          const { data: estab } = await supabase
             .from('estabelecimentos')
-            .insert({
-              user_id: userId,
-              nome: profile.nome_estabelecimento || 'Meu Estabelecimento',
-              telefone: profile.telefone,
-            })
-            .select()
-            .single();
-          estabelecimentoIdValue = newEstab?.id;
-        }
+            .select('*')
+            .eq('user_id', userId)
+            .maybeSingle();
 
-        // Use establishment from estabelecimentos table only
+          estabelecimentoIdValue = estab?.id || null;
+        } else if (userRole.role === 'profissional') {
+          // Carregar estabelecimento vinculado ao profissional
+          const { data: prof } = await supabase
+            .from('profissionais')
+            .select('estabelecimento_id')
+            .eq('user_id', userId)
+            .maybeSingle();
+          estabelecimentoIdValue = prof?.estabelecimento_id || null;
+        } else {
+          // Cliente: tentar obter via vínculo
+          const { data: vinc } = await supabase
+            .from('vinculos_cliente')
+            .select('estabelecimento_id')
+            .eq('cliente_user_id', userId)
+            .maybeSingle();
+          estabelecimentoIdValue = vinc?.estabelecimento_id || null;
+        }
 
         const usuarioData: Usuario = {
           id: profile.id,
@@ -227,7 +232,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
           nomeNegocio: profile.nome_estabelecimento || '',
           configuracoes: defaultConfiguracoes,
           onboardingCompleto: true,
-          setupCompleto: Boolean(profile.nome_estabelecimento),
+          setupCompleto: userRole.role === 'administrador' ? Boolean(profile.nome_estabelecimento) : true,
         };
         setUsuario(usuarioData);
         setEstabelecimentoId(estabelecimentoIdValue);
@@ -744,6 +749,35 @@ export function AppProvider({ children }: { children: ReactNode }) {
     } catch (error) {
       console.error('Erro ao regenerar código:', error);
       return null;
+    }
+  };
+
+  // Vincular profissional por código de acesso e promover role
+  const vincularProfissionalPorCodigo = async (
+    codigo: string,
+    nome?: string,
+    telefone?: string
+  ): Promise<boolean> => {
+    if (!user?.id) return false;
+    try {
+      const { data, error } = await supabase.rpc('vincular_profissional_por_codigo', {
+        _codigo_acesso: codigo.toUpperCase(),
+        _nome: nome || null,
+        _telefone: telefone || null,
+      });
+      if (error) throw error;
+      // Recarregar perfil e dados para obter estabelecimento e role atualizados
+      await loadUserProfile(user.id);
+      if (data && data.length > 0) {
+        const estabId = data[0].estabelecimento_id as string;
+        if (estabId) await loadAllData(estabId);
+      }
+      return true;
+    } catch (error) {
+      if (import.meta.env.DEV) {
+        console.error('Erro ao vincular profissional por código:', error);
+      }
+      return false;
     }
   };
 
@@ -1468,6 +1502,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     loginComGoogle,
     criarEstabelecimento,
     vincularClientePorCodigo,
+    vincularProfissionalPorCodigo,
     regenerarCodigoAcesso,
     adicionarCliente,
     atualizarCliente,
