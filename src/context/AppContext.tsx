@@ -38,6 +38,7 @@ interface AppContextType {
   criarEstabelecimento: (nomeEstabelecimento: string, telefone: string, categoria: string) => Promise<{ estabelecimentoId: string; codigoAcesso: string } | null>;
   vincularClientePorCodigo: (codigo: string) => Promise<boolean>;
   regenerarCodigoAcesso: () => Promise<string | null>;
+  ingressarComoProfissionalPorCodigo: (codigo: string, nome?: string, telefone?: string) => Promise<boolean>;
   
   // Clientes
   adicionarCliente: (cliente: Omit<Cliente, 'id' | 'dataCadastro'>) => Promise<void>;
@@ -172,54 +173,91 @@ export function AppProvider({ children }: { children: ReactNode }) {
         .eq('id', userId)
         .maybeSingle();
 
-      const { data: userRole } = await supabase
+      const { data: roles } = await supabase
         .from('user_roles')
         .select('role')
-        .eq('user_id', userId)
-        .maybeSingle();
+        .eq('user_id', userId);
+
+      const rolesList = (roles || []).map(r => r.role as string);
+      const effectiveRole = rolesList.includes('administrador')
+        ? 'administrador'
+        : rolesList.includes('profissional')
+          ? 'profissional'
+          : rolesList.includes('cliente')
+            ? 'cliente'
+            : null;
 
       // Se não tem perfil completo (login via Google sem completar cadastro)
-      if (!profile || !profile.telefone || !profile.categoria || !userRole) {
+      if (!profile || !profile.telefone || !profile.categoria || !effectiveRole) {
         // Redirecionar para pré-cadastro
-        if (window.location.pathname !== '/pre-cadastro-google') {
+        if (window.location.pathname !== '/pre-cadastro-google' && window.location.pathname !== '/selecao-perfil') {
           window.location.href = '/pre-cadastro-google';
         }
         return;
       }
 
-      if (profile && userRole) {
-        // Load or create estabelecimento
-        const { data: estab } = await supabase
-          .from('estabelecimentos')
-          .select('*')
-          .eq('user_id', userId)
-          .maybeSingle();
+      if (profile && effectiveRole) {
+        let estabelecimentoIdValue: string | null = null;
 
-        let estabelecimentoIdValue = estab?.id;
-
-        if (!estab && userRole.role === 'administrador') {
-          // Create estabelecimento for admin
-          const { data: newEstab } = await supabase
+        // 1) Se for administrador (dono), usa/gera estabelecimento do usuário
+        if (effectiveRole === 'administrador') {
+          const { data: estab } = await supabase
             .from('estabelecimentos')
-            .insert({
-              user_id: userId,
-              nome: profile.nome_estabelecimento || 'Meu Estabelecimento',
-              telefone: profile.telefone,
-            })
-            .select()
-            .single();
-          estabelecimentoIdValue = newEstab?.id;
+            .select('*')
+            .eq('user_id', userId)
+            .maybeSingle();
+
+          estabelecimentoIdValue = estab?.id || null;
+
+          if (!estab) {
+            // Cria um esqueleto de estabelecimento para o admin, se nome estiver presente
+            const { data: newEstab } = await supabase
+              .from('estabelecimentos')
+              .insert({
+                user_id: userId,
+                nome: profile.nome_estabelecimento || 'Meu Estabelecimento',
+                telefone: profile.telefone,
+              })
+              .select()
+              .single();
+            estabelecimentoIdValue = newEstab?.id || null;
+          }
         }
 
-        // Use establishment from estabelecimentos table only
+        // 2) Se for profissional, tenta obter estabelecimento pelo vínculo em profissionais
+        if (effectiveRole === 'profissional' && !estabelecimentoIdValue) {
+          const { data: prof } = await supabase
+            .from('profissionais')
+            .select('estabelecimento_id')
+            .eq('user_id', userId)
+            .maybeSingle();
+          estabelecimentoIdValue = prof?.estabelecimento_id || null;
+        }
+
+        // 3) Se for cliente, tenta obter pelo vínculo mais recente
+        if (effectiveRole === 'cliente' && !estabelecimentoIdValue) {
+          const { data: vinc } = await supabase
+            .from('vinculos_cliente')
+            .select('estabelecimento_id')
+            .eq('cliente_user_id', userId)
+            .order('criado_em', { ascending: false })
+            .limit(1)
+            .maybeSingle();
+          estabelecimentoIdValue = vinc?.estabelecimento_id || null;
+        }
+
+        // 4) Fallback: se profile.estabelecimento_id estiver setado, usa
+        if (!estabelecimentoIdValue && (profile as any).estabelecimento_id) {
+          estabelecimentoIdValue = (profile as any).estabelecimento_id as string;
+        }
 
         const usuarioData: Usuario = {
           id: profile.id,
           nome: profile.nome_completo,
           email: user?.email || '',
           telefone: profile.telefone,
-          tipo: userRole.role as any,
-          estabelecimentoId: estabelecimentoIdValue || null as any,
+          tipo: effectiveRole as any,
+          estabelecimentoId: (estabelecimentoIdValue || null) as any,
           estabelecimentoNome: profile.nome_estabelecimento || '',
           ativo: profile.ativo,
           dataCadastro: new Date(profile.data_cadastro),
@@ -227,10 +265,20 @@ export function AppProvider({ children }: { children: ReactNode }) {
           nomeNegocio: profile.nome_estabelecimento || '',
           configuracoes: defaultConfiguracoes,
           onboardingCompleto: true,
-          setupCompleto: Boolean(profile.nome_estabelecimento),
+          // setupCompleto apenas para admins (exige nome do estabelecimento)
+          setupCompleto: effectiveRole === 'administrador' ? Boolean(profile.nome_estabelecimento) : true,
         };
         setUsuario(usuarioData);
         setEstabelecimentoId(estabelecimentoIdValue);
+
+        // Redirecionar para seleção de perfil quando ainda não há vínculo/estabelecimento
+        const isOnSelection = window.location.pathname === '/selecao-perfil';
+        const isOnPreGoogle = window.location.pathname === '/pre-cadastro-google';
+        if (!isOnSelection && !isOnPreGoogle) {
+          if ((effectiveRole === 'cliente' || effectiveRole === 'profissional') && !estabelecimentoIdValue) {
+            window.location.href = '/selecao-perfil';
+          }
+        }
       }
     } catch (error) {
       if (import.meta.env.DEV) {
@@ -727,6 +775,29 @@ export function AppProvider({ children }: { children: ReactNode }) {
       return true;
     } catch (error) {
       console.error('Erro ao vincular:', error);
+      return false;
+    }
+  };
+
+  // Ingressar como profissional em um estabelecimento via código
+  const ingressarComoProfissionalPorCodigo = async (
+    codigo: string,
+    nome?: string,
+    telefone?: string
+  ): Promise<boolean> => {
+    if (!user?.id) return false;
+    try {
+      const { data, error } = await supabase.rpc('ingressar_como_profissional', {
+        _codigo: codigo,
+        _nome: nome ?? null,
+        _telefone: telefone ?? null,
+      });
+      if (error) throw error;
+      // Recarregar perfil para obter estabelecimentoId
+      await loadUserProfile(user.id);
+      return Boolean(data);
+    } catch (error) {
+      console.error('Erro ao ingressar como profissional:', error);
       return false;
     }
   };
@@ -1469,6 +1540,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     criarEstabelecimento,
     vincularClientePorCodigo,
     regenerarCodigoAcesso,
+    ingressarComoProfissionalPorCodigo,
     adicionarCliente,
     atualizarCliente,
     removerCliente,
