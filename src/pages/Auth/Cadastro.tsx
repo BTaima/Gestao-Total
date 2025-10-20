@@ -7,43 +7,18 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
-import { User, Mail, Lock, Phone, Building2, Briefcase, ArrowLeft, Eye, EyeOff, Chrome } from 'lucide-react';
-
-const CATEGORIAS = [
-  'Cabeleireiro(a)',
-  'Manicure/Pedicure',
-  'Massagista',
-  'Esteticista',
-  'Barbeiro(a)',
-  'Maquiador(a)',
-  'Depilador(a)',
-  'Designer de Sobrancelhas',
-  'Fisioterapeuta',
-  'Nutricionista',
-  'Personal Trainer',
-  'Outro'
-];
+import { User, Mail, Lock, ArrowLeft, Eye, EyeOff, Chrome } from 'lucide-react';
 
 export default function Cadastro() {
   const navigate = useNavigate();
   const { cadastrar, loginComGoogle } = useApp();
   const [nome, setNome] = useState('');
-  const [nomeEstabelecimento, setNomeEstabelecimento] = useState('');
   const [email, setEmail] = useState('');
-  const [telefone, setTelefone] = useState('');
-  const [categoria, setCategoria] = useState('');
   const [senha, setSenha] = useState('');
   const [confirmSenha, setConfirmSenha] = useState('');
   const [loading, setLoading] = useState(false);
   const [mostrarSenha, setMostrarSenha] = useState(false);
   const [mostrarConfirmSenha, setMostrarConfirmSenha] = useState(false);
-
-  const formatTelefone = (value: string) => {
-    const numbers = value.replace(/\D/g, '');
-    if (numbers.length <= 2) return numbers;
-    if (numbers.length <= 7) return `(${numbers.slice(0, 2)}) ${numbers.slice(2)}`;
-    return `(${numbers.slice(0, 2)}) ${numbers.slice(2, 7)}-${numbers.slice(7, 11)}`;
-  };
 
   const validatePassword = (password: string): boolean => {
     return (
@@ -67,16 +42,6 @@ export default function Cadastro() {
       return;
     }
 
-    if (telefone.replace(/\D/g, '').length < 10) {
-      toast.error('Digite um telefone válido com DDD');
-      return;
-    }
-
-    if (!categoria) {
-      toast.error('Selecione uma categoria de trabalho');
-      return;
-    }
-
     setLoading(true);
 
     try {
@@ -84,13 +49,14 @@ export default function Cadastro() {
         nome,
         email,
         senha,
-        telefone,
-        nomeEstabelecimento,
-        categoria,
+        telefone: '', // Will be filled in role selection
+        nomeEstabelecimento: '', // Will be filled in role selection
+        categoria: '', // Will be filled in role selection
       });
 
       if (success) {
         toast.success('Cadastro realizado! Verifique seu email para confirmar sua conta.');
+        // Redirecionar para login, que depois redirecionará para seleção de perfil
         navigate('/login');
       } else {
         toast.error('Este email já está cadastrado');
@@ -151,24 +117,6 @@ export default function Cadastro() {
               </div>
             </div>
 
-            {/* Nome do Estabelecimento */}
-            <div className="space-y-2">
-              <Label htmlFor="estabelecimento">Nome do estabelecimento</Label>
-              <div className="relative">
-                <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                <Input
-                  id="estabelecimento"
-                  type="text"
-                  placeholder="Nome do seu negócio"
-                  value={nomeEstabelecimento}
-                  onChange={(e) => setNomeEstabelecimento(e.target.value)}
-                  className="pl-10"
-                  required
-                  minLength={3}
-                />
-              </div>
-            </div>
-
             {/* Email */}
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
@@ -183,44 +131,6 @@ export default function Cadastro() {
                   className="pl-10"
                   required
                 />
-              </div>
-            </div>
-
-            {/* Telefone */}
-            <div className="space-y-2">
-              <Label htmlFor="telefone">Telefone (com DDD)</Label>
-              <div className="relative">
-                <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                <Input
-                  id="telefone"
-                  type="tel"
-                  placeholder="(00) 00000-0000"
-                  value={telefone}
-                  onChange={(e) => setTelefone(formatTelefone(e.target.value))}
-                  className="pl-10"
-                  maxLength={15}
-                  required
-                />
-              </div>
-            </div>
-
-            {/* Categoria de Trabalho */}
-            <div className="space-y-2">
-              <Label htmlFor="categoria">Categoria de trabalho</Label>
-              <div className="relative">
-                <Briefcase className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground z-10" />
-                <Select value={categoria} onValueChange={setCategoria} required>
-                  <SelectTrigger className="pl-10">
-                    <SelectValue placeholder="Selecione sua categoria" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {CATEGORIAS.map((cat) => (
-                      <SelectItem key={cat} value={cat}>
-                        {cat}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
               </div>
             </div>
 

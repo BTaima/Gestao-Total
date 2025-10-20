@@ -63,7 +63,10 @@ const AppRoutes = ({ onboardingVisto }: { onboardingVisto: boolean }) => {
       {usuario ? (
         <>
           {!usuario.setupCompleto ? (
-            <Route path="*" element={<Navigate to="/onboarding-setup" replace />} />
+            <>
+              <Route path="/selecao-perfil" element={<SelecaoPerfil />} />
+              <Route path="*" element={<Navigate to="/selecao-perfil" replace />} />
+            </>
           ) : (
             <>
               <Route path="/" element={<Navigate to={
