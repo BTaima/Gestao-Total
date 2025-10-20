@@ -91,7 +91,7 @@ export default function Cadastro() {
 
       if (success) {
         toast.success('Cadastro realizado! Verifique seu email para confirmar sua conta.');
-        navigate('/login');
+        navigate('/selecao-perfil');
       } else {
         toast.error('Este email já está cadastrado');
       }
