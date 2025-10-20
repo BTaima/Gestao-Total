@@ -9,11 +9,13 @@ import { Briefcase, Store, Scissors, CheckCircle2 } from 'lucide-react';
 
 export default function OnboardingSetup() {
   const navigate = useNavigate();
-  const { atualizarUsuario, adicionarServico, usuario } = useApp();
+  const { criarEstabelecimento, adicionarServico, usuario } = useApp();
   const [step, setStep] = useState(1);
   const [profissao, setProfissao] = useState('');
   const [nomeNegocio, setNomeNegocio] = useState('');
+  const [telefone, setTelefone] = useState('');
   const [servicos, setServicos] = useState(['', '', '']);
+  const [loading, setLoading] = useState(false);
 
   const handleProfissaoNext = () => {
     if (!profissao.trim()) {
@@ -41,7 +43,7 @@ export default function OnboardingSetup() {
     setServicos([...servicos, '']);
   };
 
-  const handleFinalizar = () => {
+  const handleFinalizar = async () => {
     const servicosPreenchidos = servicos.filter(s => s.trim());
     
     if (servicosPreenchidos.length < 3) {
@@ -49,30 +51,46 @@ export default function OnboardingSetup() {
       return;
     }
 
-    // Update user
-    atualizarUsuario({
-      profissao,
-      nomeNegocio,
-      setupCompleto: true,
-    });
+    if (!telefone.trim()) {
+      toast.error('Digite um telefone');
+      return;
+    }
 
-    // Add services
-    servicosPreenchidos.forEach(nome => {
-      adicionarServico({
-        nome,
-        duracao: 60,
-        valor: 0,
-        cor: '#6366f1',
-        ativo: true,
-        exigePagamentoAntecipado: false,
-        destaque: false,
-        profissionaisIds: [],
-        estabelecimentoId: usuario?.estabelecimentoId || ''
-      });
-    });
+    setLoading(true);
 
-    toast.success('Perfil configurado! Bem-vindo ao Gestão Total');
-    navigate('/home');
+    try {
+      // Criar estabelecimento e promover usuário
+      const result = await criarEstabelecimento(nomeNegocio, telefone, profissao);
+
+      if (!result) {
+        toast.error('Erro ao criar estabelecimento');
+        setLoading(false);
+        return;
+      }
+
+      // Add services
+      for (const nome of servicosPreenchidos) {
+        await adicionarServico({
+          nome,
+          duracao: 60,
+          valor: 0,
+          cor: '#6366f1',
+          ativo: true,
+          exigePagamentoAntecipado: false,
+          destaque: false,
+          profissionaisIds: [],
+          estabelecimentoId: result.estabelecimentoId,
+        });
+      }
+
+      toast.success(`Estabelecimento criado! Código: ${result.codigoAcesso}`);
+      navigate('/home');
+    } catch (error) {
+      console.error('Erro no onboarding:', error);
+      toast.error('Erro ao finalizar configuração');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -155,6 +173,18 @@ export default function OnboardingSetup() {
                 />
               </div>
 
+              <div className="space-y-2">
+                <Label htmlFor="telefone">Telefone</Label>
+                <Input
+                  id="telefone"
+                  type="tel"
+                  placeholder="(00) 00000-0000"
+                  value={telefone}
+                  onChange={(e) => setTelefone(e.target.value)}
+                  className="h-12 text-base"
+                />
+              </div>
+
               <div className="flex gap-3">
                 <Button
                   variant="outline"
@@ -222,9 +252,10 @@ export default function OnboardingSetup() {
               <Button
                 onClick={handleFinalizar}
                 className="flex-1 btn-gradient h-12"
+                disabled={loading}
               >
                 <CheckCircle2 className="w-5 h-5 mr-2" />
-                Finalizar
+                {loading ? 'Criando...' : 'Finalizar'}
               </Button>
             </div>
           </div>

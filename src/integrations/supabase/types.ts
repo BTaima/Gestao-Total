@@ -295,6 +295,7 @@ export type Database = {
         Row: {
           cidade: string | null
           cnpj: string | null
+          codigo_acesso: string | null
           configuracoes: Json | null
           created_at: string | null
           email: string | null
@@ -310,6 +311,7 @@ export type Database = {
         Insert: {
           cidade?: string | null
           cnpj?: string | null
+          codigo_acesso?: string | null
           configuracoes?: Json | null
           created_at?: string | null
           email?: string | null
@@ -325,6 +327,7 @@ export type Database = {
         Update: {
           cidade?: string | null
           cnpj?: string | null
+          codigo_acesso?: string | null
           configuracoes?: Json | null
           created_at?: string | null
           email?: string | null
@@ -730,17 +733,64 @@ export type Database = {
         }
         Relationships: []
       }
+      vinculos_cliente: {
+        Row: {
+          ativo: boolean | null
+          cliente_user_id: string
+          criado_em: string | null
+          estabelecimento_id: string
+          id: string
+        }
+        Insert: {
+          ativo?: boolean | null
+          cliente_user_id: string
+          criado_em?: string | null
+          estabelecimento_id: string
+          id?: string
+        }
+        Update: {
+          ativo?: boolean | null
+          cliente_user_id?: string
+          criado_em?: string | null
+          estabelecimento_id?: string
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vinculos_cliente_estabelecimento_id_fkey"
+            columns: ["estabelecimento_id"]
+            isOneToOne: false
+            referencedRelation: "estabelecimentos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
+      criar_estabelecimento_e_promover: {
+        Args: {
+          _categoria: string
+          _nome_estabelecimento: string
+          _telefone: string
+        }
+        Returns: {
+          codigo_acesso: string
+          estabelecimento_id: string
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
           _user_id: string
         }
         Returns: boolean
+      }
+      regenerar_codigo_acesso: {
+        Args: { _estabelecimento_id: string }
+        Returns: string
       }
     }
     Enums: {

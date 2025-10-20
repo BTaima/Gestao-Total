@@ -35,6 +35,7 @@ interface AppContextType {
   }) => Promise<boolean>;
   logout: () => void;
   atualizarUsuario: (usuario: Partial<Usuario>) => void;
+  criarEstabelecimento: (nomeEstabelecimento: string, telefone: string, categoria: string) => Promise<{ estabelecimentoId: string; codigoAcesso: string } | null>;
   vincularClientePorCodigo: (codigo: string) => Promise<boolean>;
   regenerarCodigoAcesso: () => Promise<string | null>;
   
@@ -657,53 +658,91 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  // Criar estabelecimento e promover usuário a admin
+  const criarEstabelecimento = async (
+    nomeEstabelecimento: string,
+    telefone: string,
+    categoria: string
+  ): Promise<{ estabelecimentoId: string; codigoAcesso: string } | null> => {
+    if (!user?.id) return null;
+
+    try {
+      const { data, error } = await supabase.rpc('criar_estabelecimento_e_promover', {
+        _nome_estabelecimento: nomeEstabelecimento,
+        _telefone: telefone,
+        _categoria: categoria,
+      });
+
+      if (error) throw error;
+
+      if (data && data.length > 0) {
+        const result = data[0];
+        // Recarregar perfil do usuário
+        await loadUserProfile(user.id);
+        return {
+          estabelecimentoId: result.estabelecimento_id,
+          codigoAcesso: result.codigo_acesso,
+        };
+      }
+
+      return null;
+    } catch (error) {
+      console.error('Erro ao criar estabelecimento:', error);
+      return null;
+    }
+  };
+
   // Vincular cliente a um estabelecimento através de código do admin
   const vincularClientePorCodigo = async (codigo: string): Promise<boolean> => {
     if (!user?.id) return false;
+
     try {
-      const { data: estab } = await supabase
+      // Buscar estabelecimento por código
+      const { data: estab, error: estabError } = await supabase
         .from('estabelecimentos')
         .select('id')
-        .eq('nome', codigo)
+        .eq('codigo_acesso', codigo.toUpperCase())
         .single();
-      if (!estab) return false;
 
-      const { data: clienteExist } = await supabase
-        .from('clientes')
-        .select('id')
-        .eq('telefone', user.email || '')
-        .maybeSingle();
-
-      if (!clienteExist) {
-        // Criar cliente básico a partir do profile
-        const { data: profile } = await supabase.from('profiles').select('*').eq('id', user.id).single();
-        await supabase.from('clientes').insert({
-          estabelecimento_id: estab.id,
-          user_id: user.id,
-          nome: profile?.nome_completo || 'Cliente',
-          telefone: profile?.telefone || '',
-          email: (await supabase.auth.getUser()).data.user?.email || null,
-          ativo: true,
-        });
+      if (estabError || !estab) {
+        console.error('Estabelecimento não encontrado:', estabError);
+        return false;
       }
 
-      // Recarrega contexto
-      setEstabelecimentoId(estab.id);
-      await loadAllData(estab.id);
+      // Criar vínculo
+      const { error: vinculoError } = await supabase
+        .from('vinculos_cliente')
+        .insert({
+          cliente_user_id: user.id,
+          estabelecimento_id: estab.id,
+        });
+
+      if (vinculoError) {
+        console.error('Erro ao criar vínculo:', vinculoError);
+        return false;
+      }
+
+      // Recarregar perfil
+      await loadUserProfile(user.id);
       return true;
     } catch (error) {
-      if (import.meta.env.DEV) console.error('Erro ao vincular cliente por código:', error);
+      console.error('Erro ao vincular:', error);
       return false;
     }
   };
 
   const regenerarCodigoAcesso = async (): Promise<string | null> => {
-    if (!user?.id || !estabelecimentoId) return null;
+    if (!estabelecimentoId) return null;
+
     try {
-      // Retorna o ID do estabelecimento como código de acesso
-      return estabelecimentoId.slice(0, 8);
+      const { data, error } = await supabase.rpc('regenerar_codigo_acesso', {
+        _estabelecimento_id: estabelecimentoId,
+      });
+
+      if (error) throw error;
+      return data;
     } catch (error) {
-      if (import.meta.env.DEV) console.error('Erro ao regenerar código:', error);
+      console.error('Erro ao regenerar código:', error);
       return null;
     }
   };
@@ -1427,6 +1466,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     logout,
     atualizarUsuario,
     loginComGoogle,
+    criarEstabelecimento,
     vincularClientePorCodigo,
     regenerarCodigoAcesso,
     adicionarCliente,
