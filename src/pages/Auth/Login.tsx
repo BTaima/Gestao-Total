@@ -24,7 +24,7 @@ export default function Login() {
       const result = await login(email, senha);
       if (result === true) {
         toast.success('Login realizado com sucesso!');
-        navigate('/');
+        navigate('/selecao-perfil');
       } else if (result === 'email_not_confirmed') {
         toast.error('Email não confirmado. Verifique sua caixa de entrada.', {
           action: {
