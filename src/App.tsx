@@ -75,7 +75,8 @@ const AppRoutes = ({ onboardingVisto }: { onboardingVisto: boolean }) => {
               {/* Rotas Admin */}
               {usuario.tipo === 'administrador' && (
                 <>
-                  <Route path="/home" element={<Home />} />
+                  <Route path="/home" element={<Dashboard />} />
+                  <Route path="/dashboard" element={<Dashboard />} />
                   <Route path="/agenda" element={<Agenda />} />
                   <Route path="/clientes" element={<Clientes />} />
                   <Route path="/financas" element={<Financas />} />
