@@ -33,6 +33,7 @@ interface AppContextType {
     nomeEstabelecimento: string;
     categoria: string;
   }) => Promise<boolean>;
+  definirTipoUsuario: (tipo: TipoUsuario) => Promise<boolean>;
   logout: () => void;
   atualizarUsuario: (usuario: Partial<Usuario>) => void;
   criarEstabelecimento: (nomeEstabelecimento: string, telefone: string, categoria: string) => Promise<{ estabelecimentoId: string; codigoAcesso: string } | null>;
@@ -179,10 +180,18 @@ export function AppProvider({ children }: { children: ReactNode }) {
         .maybeSingle();
 
       // Se não tem perfil completo (login via Google sem completar cadastro)
-      if (!profile || !profile.telefone || !profile.categoria || !userRole) {
-        // Redirecionar para pré-cadastro
+      if (!profile || !profile.telefone || !profile.categoria) {
+        // Redirecionar para pré-cadastro para completar dados básicos
         if (window.location.pathname !== '/pre-cadastro-google') {
           window.location.href = '/pre-cadastro-google';
+        }
+        return;
+      }
+
+      // Se tem perfil mas não tem role definida, redirecionar para seleção de perfil
+      if (!userRole) {
+        if (window.location.pathname !== '/selecao-perfil') {
+          window.location.href = '/selecao-perfil';
         }
         return;
       }
@@ -521,8 +530,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
       if (profileError) throw profileError;
 
-      // Role já foi criada automaticamente pelo trigger como 'cliente'
-      // Não permitimos que o usuário escolha seu papel por segurança
+      // Role será definida na seleção de perfil
+      // Não criamos role automaticamente aqui
 
       // Reload user profile
       await loadUserProfile(user.id);
@@ -531,6 +540,30 @@ export function AppProvider({ children }: { children: ReactNode }) {
     } catch (error) {
       if (import.meta.env.DEV) {
         console.error('Erro ao completar cadastro Google:', error);
+      }
+      return false;
+    }
+  };
+
+  const definirTipoUsuario = async (tipo: TipoUsuario): Promise<boolean> => {
+    if (!user?.id) return false;
+    
+    try {
+      // Update user role
+      const { error: roleError } = await supabase
+        .from('user_roles')
+        .update({ role: tipo })
+        .eq('user_id', user.id);
+
+      if (roleError) throw roleError;
+
+      // Reload user profile
+      await loadUserProfile(user.id);
+      
+      return true;
+    } catch (error) {
+      if (import.meta.env.DEV) {
+        console.error('Erro ao definir tipo de usuário:', error);
       }
       return false;
     }
@@ -1463,6 +1496,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     login,
     cadastrar,
     completarCadastroGoogle,
+    definirTipoUsuario,
     logout,
     atualizarUsuario,
     loginComGoogle,
