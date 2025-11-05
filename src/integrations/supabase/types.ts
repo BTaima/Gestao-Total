@@ -792,6 +792,10 @@ export type Database = {
         Args: { _estabelecimento_id: string }
         Returns: string
       }
+      vincular_profissional_por_codigo: {
+        Args: { _codigo_acesso: string; _nome?: string | null; _telefone?: string | null }
+        Returns: { estabelecimento_id: string; profissional_id: string }[]
+      }
     }
     Enums: {
       app_role: "administrador" | "profissional" | "cliente"

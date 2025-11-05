@@ -6,74 +6,22 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useApp } from '@/context/AppContext';
 import { useNavigate } from 'react-router-dom';
-import { TipoUsuario } from '@/types';
 import { toast } from 'sonner';
-import { generateId } from '@/utils/storage';
 
 type PerfilSelecionado = 'admin' | 'profissional' | 'cliente' | null;
 
 export default function SelecaoPerfil() {
   const [perfilSelecionado, setPerfilSelecionado] = useState<PerfilSelecionado>(null);
-  const [formData, setFormData] = useState({
-    nome: '',
-    email: '',
-    senha: '',
-    telefone: '',
-    nomeEstabelecimento: '',
-    cnpj: '',
-    codigoConvite: ''
-  });
-  const { cadastrar, atualizarUsuario } = useApp();
+  const { usuario } = useApp();
   const navigate = useNavigate();
 
-  const handleCadastro = async () => {
-    if (!formData.nome || !formData.email || !formData.senha || !formData.telefone) {
-      toast.error('Preencha todos os campos obrigatórios');
-      return;
-    }
-
-    const sucesso = await cadastrar({
-      nome: formData.nome,
-      email: formData.email,
-      senha: formData.senha,
-      telefone: formData.telefone,
-      nomeEstabelecimento: formData.nomeEstabelecimento,
-      categoria: 'Outro',
-    });
-    
-    if (sucesso) {
-      if (perfilSelecionado === 'admin') {
-        const estabelecimentoId = generateId();
-        atualizarUsuario({
-          tipo: TipoUsuario.ADMINISTRADOR,
-          telefone: formData.telefone,
-          estabelecimentoNome: formData.nomeEstabelecimento,
-          estabelecimentoId,
-          setupCompleto: true
-        });
-        toast.success('Estabelecimento criado com sucesso!');
-        navigate('/home');
-      } else if (perfilSelecionado === 'profissional') {
-        atualizarUsuario({
-          tipo: TipoUsuario.PROFISSIONAL,
-          telefone: formData.telefone,
-          setupCompleto: false
-        });
-        toast.success('Solicitação de cadastro enviada!');
-        navigate('/home');
-      } else if (perfilSelecionado === 'cliente') {
-        atualizarUsuario({
-          tipo: TipoUsuario.CLIENTE,
-          telefone: formData.telefone,
-          setupCompleto: true
-        });
-        toast.success('Conta criada com sucesso!');
-        navigate('/home');
-      }
-    } else {
-      toast.error('Email já cadastrado');
-    }
-  };
+  if (!usuario) {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-6">
+        <p className="text-muted-foreground">Faça login para continuar.</p>
+      </div>
+    );
+  }
 
   if (!perfilSelecionado) {
     return (
@@ -85,7 +33,10 @@ export default function SelecaoPerfil() {
           <div className="grid md:grid-cols-3 gap-4">
             <Card 
               className="p-6 cursor-pointer hover:border-primary transition-all hover:shadow-lg"
-              onClick={() => setPerfilSelecionado('admin')}
+              onClick={() => {
+                toast.success('Vamos configurar seu estabelecimento');
+                navigate('/onboarding-setup');
+              }}
             >
               <div className="flex flex-col items-center text-center space-y-4">
                 <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
@@ -100,7 +51,7 @@ export default function SelecaoPerfil() {
 
             <Card 
               className="p-6 cursor-pointer hover:border-primary transition-all hover:shadow-lg"
-              onClick={() => setPerfilSelecionado('profissional')}
+              onClick={() => navigate('/onboarding-profissional')}
             >
               <div className="flex flex-col items-center text-center space-y-4">
                 <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
@@ -115,7 +66,7 @@ export default function SelecaoPerfil() {
 
             <Card 
               className="p-6 cursor-pointer hover:border-primary transition-all hover:shadow-lg"
-              onClick={() => setPerfilSelecionado('cliente')}
+              onClick={() => navigate('/onboarding-cliente')}
             >
               <div className="flex flex-col items-center text-center space-y-4">
                 <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
@@ -133,122 +84,5 @@ export default function SelecaoPerfil() {
     );
   }
 
-  return (
-    <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4">
-      <Card className="w-full max-w-md p-6">
-        <Button 
-          variant="ghost" 
-          onClick={() => setPerfilSelecionado(null)}
-          className="mb-4"
-        >
-          ← Voltar
-        </Button>
-
-        <h2 className="text-2xl font-bold mb-6">
-          {perfilSelecionado === 'admin' && 'Criar Estabelecimento'}
-          {perfilSelecionado === 'profissional' && 'Cadastro Profissional'}
-          {perfilSelecionado === 'cliente' && 'Cadastro Cliente'}
-        </h2>
-
-        <div className="space-y-4">
-          <div>
-            <Label>Nome Completo</Label>
-            <Input 
-              value={formData.nome}
-              onChange={(e) => setFormData({...formData, nome: e.target.value})}
-              placeholder="Seu nome completo"
-            />
-          </div>
-
-          <div>
-            <Label>Email</Label>
-            <Input 
-              type="email"
-              value={formData.email}
-              onChange={(e) => setFormData({...formData, email: e.target.value})}
-              placeholder="seu@email.com"
-            />
-          </div>
-
-          <div>
-            <Label>Senha</Label>
-            <Input 
-              type="password"
-              value={formData.senha}
-              onChange={(e) => setFormData({...formData, senha: e.target.value})}
-              placeholder="Sua senha"
-            />
-          </div>
-
-          <div>
-            <Label>Telefone</Label>
-            <Input 
-              value={formData.telefone}
-              onChange={(e) => setFormData({...formData, telefone: e.target.value})}
-              placeholder="(00) 00000-0000"
-            />
-          </div>
-
-          {perfilSelecionado === 'admin' && (
-            <>
-              <div>
-                <Label>Nome do Estabelecimento</Label>
-                <Input 
-                  value={formData.nomeEstabelecimento}
-                  onChange={(e) => setFormData({...formData, nomeEstabelecimento: e.target.value})}
-                  placeholder="Nome do seu negócio"
-                />
-              </div>
-              <div>
-                <Label>CNPJ (opcional)</Label>
-                <Input 
-                  value={formData.cnpj}
-                  onChange={(e) => setFormData({...formData, cnpj: e.target.value})}
-                  placeholder="00.000.000/0000-00"
-                />
-              </div>
-            </>
-          )}
-
-          {perfilSelecionado === 'profissional' && (
-            <>
-              <div>
-                <Label>Nome do Estabelecimento</Label>
-                <Input 
-                  value={formData.nomeEstabelecimento}
-                  onChange={(e) => setFormData({...formData, nomeEstabelecimento: e.target.value})}
-                  placeholder="Buscar estabelecimento"
-                />
-              </div>
-              <div>
-                <Label>Código de Convite</Label>
-                <Input 
-                  value={formData.codigoConvite}
-                  onChange={(e) => setFormData({...formData, codigoConvite: e.target.value})}
-                  placeholder="Código fornecido pelo administrador"
-                />
-              </div>
-            </>
-          )}
-
-          {perfilSelecionado === 'cliente' && (
-            <div>
-              <Label>Nome do Estabelecimento</Label>
-              <Input 
-                value={formData.nomeEstabelecimento}
-                onChange={(e) => setFormData({...formData, nomeEstabelecimento: e.target.value})}
-                placeholder="Buscar estabelecimento"
-              />
-            </div>
-          )}
-
-          <Button onClick={handleCadastro} className="w-full">
-            {perfilSelecionado === 'admin' && 'Criar Estabelecimento'}
-            {perfilSelecionado === 'profissional' && 'Solicitar Cadastro'}
-            {perfilSelecionado === 'cliente' && 'Criar Conta'}
-          </Button>
-        </div>
-      </Card>
-    </div>
-  );
+  return null;
 }
