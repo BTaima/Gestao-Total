@@ -178,12 +178,38 @@ export function AppProvider({ children }: { children: ReactNode }) {
         .eq('user_id', userId)
         .maybeSingle();
 
-      // Se não tem perfil completo (login via Google sem completar cadastro)
-      if (!profile || !profile.telefone || !profile.categoria || !userRole) {
+      // Se não tem perfil completo (login via Google sem completar cadastro inicial)
+      if (!profile || !profile.telefone) {
         // Redirecionar para pré-cadastro
         if (window.location.pathname !== '/pre-cadastro-google') {
           window.location.href = '/pre-cadastro-google';
         }
+        return;
+      }
+
+      // Se não tem role definida, redirecionar para seleção de perfil
+      if (!userRole) {
+        if (window.location.pathname !== '/selecao-perfil') {
+          window.location.href = '/selecao-perfil';
+        }
+        // Criar usuário básico para permitir acesso à página de seleção
+        const usuarioBasico: Usuario = {
+          id: profile.id,
+          nome: profile.nome_completo,
+          email: user?.email || '',
+          telefone: profile.telefone || '',
+          tipo: 'cliente' as any, // Temporário
+          estabelecimentoId: '' as any,
+          estabelecimentoNome: profile.nome_estabelecimento || '',
+          ativo: profile.ativo,
+          dataCadastro: new Date(profile.data_cadastro),
+          profissao: profile.categoria || '',
+          nomeNegocio: profile.nome_estabelecimento || '',
+          configuracoes: defaultConfiguracoes,
+          onboardingCompleto: true,
+          setupCompleto: false,
+        };
+        setUsuario(usuarioBasico);
         return;
       }
 
@@ -470,9 +496,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
     nome: string;
     email: string;
     senha: string;
-    telefone: string;
-    nomeEstabelecimento: string;
-    categoria: string;
+    telefone?: string;
+    nomeEstabelecimento?: string;
+    categoria?: string;
   }): Promise<boolean> => {
     try {
       const redirectUrl = `${window.location.origin}/`;
@@ -484,9 +510,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
           emailRedirectTo: redirectUrl,
           data: {
             nome_completo: dados.nome,
-            telefone: dados.telefone,
-            nome_estabelecimento: dados.nomeEstabelecimento,
-            categoria: dados.categoria,
+            telefone: dados.telefone || '',
+            nome_estabelecimento: dados.nomeEstabelecimento || '',
+            categoria: dados.categoria || '',
           },
         },
       });
@@ -521,8 +547,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
       if (profileError) throw profileError;
 
-      // Role já foi criada automaticamente pelo trigger como 'cliente'
-      // Não permitimos que o usuário escolha seu papel por segurança
+      // Não criar role automaticamente - deixar o usuário escolher na tela de seleção
+      // Remover role de cliente se existir
+      await supabase
+        .from('user_roles')
+        .delete()
+        .eq('user_id', user.id);
 
       // Reload user profile
       await loadUserProfile(user.id);
