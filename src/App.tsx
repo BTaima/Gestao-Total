@@ -18,9 +18,11 @@ import Dashboard from "./pages/Admin/Dashboard";
 import Profissionais from "./pages/Admin/Profissionais";
 import Configuracoes from "./pages/Admin/Configuracoes";
 import ProfissionalDashboard from "./pages/Profissional/Dashboard";
+import OnboardingProfissional from "./pages/Profissional/OnboardingProfissional";
 import ClienteHome from "./pages/Cliente/Home";
 import MeusAgendamentos from "./pages/Cliente/MeusAgendamentos";
 import Agendar from "./pages/Cliente/Agendar";
+import OnboardingCliente from "./pages/Cliente/OnboardingCliente";
 import SelecaoPerfil from "./pages/Auth/SelecaoPerfil";
 import Relatorios from "./pages/Admin/Relatorios";
 import Servicos from "./pages/Admin/Servicos";
@@ -59,6 +61,9 @@ const AppRoutes = ({ onboardingVisto }: { onboardingVisto: boolean }) => {
       <Route path="/cadastro" element={<Cadastro />} />
       <Route path="/onboarding-setup" element={<OnboardingSetup />} />
       <Route path="/pre-cadastro-google" element={<PreCadastroGoogle />} />
+      <Route path="/selecao-perfil" element={<SelecaoPerfil />} />
+      <Route path="/onboarding-profissional" element={<OnboardingProfissional />} />
+      <Route path="/onboarding-cliente" element={<OnboardingCliente />} />
       
       {usuario ? (
         <>
