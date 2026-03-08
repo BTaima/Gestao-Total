@@ -142,7 +142,11 @@ export interface Servico {
   descricao?: string;
   categoria?: string;
   foto?: string;
+  fotoPrincipal?: string;
   destaque: boolean;
+  visivel: boolean;
+  custoOperacional: number;
+  aprovado: boolean;
   profissionaisIds: string[];
   estabelecimentoId: string;
 }
