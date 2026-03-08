@@ -291,7 +291,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
           cor: '#6366f1',
           ativo: s.ativo,
           exigePagamentoAntecipado: false,
-          destaque: false,
+          destaque: (s as any).destaque ?? false,
+          visivel: (s as any).visivel ?? true,
+          custoOperacional: Number((s as any).custo_operacional ?? 0),
+          aprovado: (s as any).aprovado ?? true,
           profissionaisIds: s.profissionais_ids || [],
           estabelecimentoId: estabId,
         })));

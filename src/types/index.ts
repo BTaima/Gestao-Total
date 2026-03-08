@@ -142,7 +142,11 @@ export interface Servico {
   descricao?: string;
   categoria?: string;
   foto?: string;
+  fotoPrincipal?: string;
   destaque: boolean;
+  visivel: boolean;
+  custoOperacional: number;
+  aprovado: boolean;
   profissionaisIds: string[];
   estabelecimentoId: string;
 }
@@ -250,4 +254,89 @@ export interface BackupData {
   servicos: Servico[];
   transacoes: Transacao[];
   lembretes: Lembrete[];
+}
+
+// =============================================
+// Novas entidades do sistema
+// =============================================
+
+export interface Mensagem {
+  id: string;
+  remetenteId: string;
+  destinatarioId: string;
+  estabelecimentoId: string;
+  conteudo: string;
+  lida: boolean;
+  createdAt: Date;
+}
+
+export interface Cupom {
+  id: string;
+  estabelecimentoId: string;
+  codigo: string;
+  descricao?: string;
+  tipoDesconto: 'percentual' | 'fixo';
+  valorDesconto: number;
+  validade?: Date;
+  ativo: boolean;
+  usoMaximo: number;
+  usoAtual: number;
+  createdAt: Date;
+}
+
+export interface Convite {
+  id: string;
+  estabelecimentoId: string;
+  codigo: string;
+  tipo: 'profissional' | 'cliente';
+  usadoPor?: string;
+  usadoEm?: Date;
+  expiraEm?: Date;
+  ativo: boolean;
+  createdAt: Date;
+}
+
+export interface ComissaoServico {
+  id: string;
+  estabelecimentoId: string;
+  profissionalId: string;
+  servicoId: string;
+  percentualComissao: number;
+  valorFixo?: number;
+  createdAt: Date;
+}
+
+export interface PoliticaCancelamento {
+  id: string;
+  estabelecimentoId: string;
+  horasMinimasAntecedencia: number;
+  valorMulta: number;
+  percentualMulta: number;
+  mensagemAviso: string;
+  ativa: boolean;
+  createdAt: Date;
+}
+
+export interface SolicitacaoAgendamento {
+  id: string;
+  clienteUserId: string;
+  estabelecimentoId: string;
+  servicoId: string;
+  profissionalId?: string;
+  opcaoHorario1: Date;
+  opcaoHorario2?: Date;
+  opcaoHorario3?: Date;
+  horarioAceito?: Date;
+  status: 'pendente' | 'aceito' | 'rejeitado';
+  observacoes?: string;
+  createdAt: Date;
+}
+
+export interface ServicoFoto {
+  id: string;
+  servicoId: string;
+  url: string;
+  ordem: number;
+  descricao?: string;
+  createdAt: Date;
 }

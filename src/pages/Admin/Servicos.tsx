@@ -85,6 +85,9 @@ export default function Servicos() {
         ...formData,
         cor: '#8B5CF6',
         exigePagamentoAntecipado: false,
+        visivel: true,
+        custoOperacional: 0,
+        aprovado: true,
         estabelecimentoId: usuario?.estabelecimentoId || ''
       });
       toast.success('Serviço criado');
