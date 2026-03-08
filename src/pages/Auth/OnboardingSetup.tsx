@@ -78,6 +78,9 @@ export default function OnboardingSetup() {
           ativo: true,
           exigePagamentoAntecipado: false,
           destaque: false,
+          visivel: true,
+          custoOperacional: 0,
+          aprovado: true,
           profissionaisIds: [],
           estabelecimentoId: result.estabelecimentoId,
         });
