@@ -61,8 +61,8 @@ export default function PreCadastroGoogle() {
       });
 
       if (success) {
-        toast.success('Cadastro completo! Complete a configuração do seu negócio');
-        setTimeout(() => navigate('/onboarding-setup'), 1000);
+        toast.success('Dados salvos! Agora escolha seu tipo de perfil');
+        setTimeout(() => navigate('/selecao-perfil'), 1000);
       } else {
         toast.error('Erro ao completar cadastro');
       }
