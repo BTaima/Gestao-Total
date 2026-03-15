@@ -57,6 +57,7 @@ const AppRoutes = ({ onboardingVisto }: { onboardingVisto: boolean }) => {
       <Route path="/onboarding" element={<Onboarding />} />
       <Route path="/login" element={<Login />} />
       <Route path="/cadastro" element={<Cadastro />} />
+      <Route path="/selecao-perfil" element={<SelecaoPerfil />} />
       <Route path="/onboarding-setup" element={<OnboardingSetup />} />
       <Route path="/pre-cadastro-google" element={<PreCadastroGoogle />} />
       
